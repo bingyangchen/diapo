@@ -131,7 +131,7 @@ flowchart TD
 - Copy the three `classDef` lines above verbatim; do not change colors or add classes. They are tuned for both GitHub light and dark themes. Fill level shows progress: dashed outline, solid outline, solid fill.
 - `A --> B` means B depends on A.
 - Keep `done` nodes permanently. Remove `abandoned` nodes when the plan is archived.
-- A vision subsection states the feature's goal and scope, then lists its stages in order, linking each stage that has a plan. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Remove the subsection when every stage is done.
+- A vision subsection states the feature's goal and scope, then lists its stages in order, linking each stage that has a plan. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Remove the subsection when every stage is done.
 - If the graph becomes hard to read, collapse each finished feature into one node in a Tier 3 PR.
 
 ## Spec Conventions
