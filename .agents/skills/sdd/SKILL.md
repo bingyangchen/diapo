@@ -40,6 +40,7 @@ When unsure, take the higher tier.
 
 - Never push to `main`. Never merge a PR. The user merges; a merge is the user's approval.
 - Commit and push only when the user explicitly instructs it. When a procedure step below reaches a commit, a push, or a PR action that needs one, stop, tell the user what is ready, and wait. Opening a PR needs a push, so it waits too.
+- Assign every PR you open to the user who directed the work: `gh pr create --assignee @me`, which resolves to the account `gh` is logged in as. If `gh` is logged in as a bot or someone other than that user, ask the user who to assign.
 - Every time you push new content to a branch that has an open PR, check whether the PR title and description still match the branch's latest state, and update them if they do not.
 - Right before every update to a PR title or description, fetch the current version from GitHub (`gh pr view <number> --json title,body`) and apply your edits on top of it, no matter how well you remember what you last wrote. Other people may be editing the same PR at the same time.
 - A plan's frontmatter `status` is the source of truth. Whenever a status changes, update `roadmap.md` in the same PR. Change statuses only through the procedures below.
