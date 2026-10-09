@@ -10,7 +10,7 @@ depends_on: []
 
 ## 目標
 
-完成後，repo 有一套可以開發、測試、部署的工具鏈，以及一個最小可行的骨架：`decks/` 底下的每份簡報都會建置成一個簡報包，不論是部署在 GitHub Pages、在本機用 static server 開啟，還是在沒有網路的電腦上直接雙擊 `index.html`，簡報包都能播放，站台首頁則列出所有發布的簡報。
+完成後，repo 有一套可以開發、測試、部署的工具鏈，以及一個最小可行的骨架：`decks/` 底下的每份簡報都會建置成一個簡報包，不論是部署在 GitHub Pages、在本機用 static server 開啟，還是在沒有網路的電腦上直接雙擊 `index.html`，簡報包都能播放，網站首頁則列出所有發布的簡報。
 
 ## 範圍
 
@@ -18,7 +18,7 @@ depends_on: []
   - 安裝 Vite、React、TypeScript、Tailwind CSS、ESLint、Prettier、Vitest、Playwright，並完成設定。
   - 在 `Makefile` 提供開發、建置、檢查、測試的指令。
   - 設定 GitHub Actions：PR 上跑 lint、型別檢查、測試與建置，merge 到 `main` 後部署到 GitHub Pages。
-  - 建立多份簡報的建置流程、站台首頁，以及 `file://` 相容的打包。
+  - 建立多份簡報的建置流程、網站首頁，以及 `file://` 相容的打包。
   - 建立一份範例簡報，只有一頁，頁面上有一張圖片。
   - 寫好 `architecture.md`、英文的 `README.md`、`product.md` 的術語表，並新增 `playback.md`、`distribution.md` 兩份 spec。
 - 刻意不做的事：
@@ -30,7 +30,7 @@ depends_on: []
 
 ### product.md
 
-- 術語表新增簡報、頁、畫布、簡報包、站台。定位、目標使用者、範圍與刻意不做的事已經依專案擁有者的要求，在本 plan 的 PR 直接寫入。
+- 術語表新增簡報、頁、畫布、簡報包、網站。定位、目標使用者、範圍與刻意不做的事已經依專案擁有者的要求，在本 plan 的 PR 直接寫入。
 
 #### 術語表
 
@@ -40,7 +40,7 @@ depends_on: []
 | 頁 | 簡報播放時的一個畫面，對應一個 TSX 檔。 |
 | 畫布 | 頁面排版用的 1920×1080 座標空間，播放時整個畫布等比縮放到螢幕上。 |
 | 簡報包 | 一份簡報建置出來的目錄，裡面有播放這份簡報所需的全部檔案。 |
-| 站台 | 部署到 GitHub Pages 的整個網站，包含首頁與所有發布的簡報包。 |
+| 網站 | 部署到 GitHub Pages 的內容，包含首頁與所有發布的簡報包。 |
 
 ### playback.md
 
@@ -77,15 +77,15 @@ depends_on: []
 
 ### distribution.md
 
-新增這份 spec，`prefix` 為 `DIST`，開頭的說明寫成：「講者用這項能力把簡報建置成可以帶到任何場地播放的簡報包，並把發布的簡報部署成站台。」
+新增這份 spec，`prefix` 為 `DIST`，開頭的說明寫成：「講者用這項能力把簡報建置成可以帶到任何場地播放的簡報包，並把發布的簡報部署成網站。」
 
 - 新增 DIST-R1 每份簡報建置成一個簡報包
 - 新增 DIST-R2 直接開啟檔案就能播放
-- 新增 DIST-R3 站台首頁列出發布的簡報
-- 新增 DIST-R4 站台部署在子路徑下也能播放
-- 新增 DIST-R5 不發布的簡報不進站台
+- 新增 DIST-R3 網站首頁列出發布的簡報
+- 新增 DIST-R4 網站部署在子路徑下也能播放
+- 新增 DIST-R5 不發布的簡報不出現在網站上
 - 新增 DIST-R6 單一檔案超過 25 MB 時建置失敗
-- 新增 DIST-R7 站台超過 800 MB 時顯示警告
+- 新增 DIST-R7 網站超過 800 MB 時顯示警告
 
 #### DIST-R1 每份簡報建置成一個簡報包
 
@@ -121,25 +121,25 @@ depends_on: []
   - 動作：把簡報包複製到另一個目錄，再開啟其中的 `index.html`
   - 結果：畫面顯示第一頁，樣式與圖片都已載入
 
-#### DIST-R3 站台首頁列出發布的簡報
+#### DIST-R3 網站首頁列出發布的簡報
 
-站台首頁列出所有發布的簡報標題，點選標題會開啟那份簡報。
+網站首頁列出所有發布的簡報標題，點選標題會開啟那份簡報。
 
 - 情境：列出簡報
   - 前提：`decks/` 底下有兩份發布的簡報
-  - 動作：開啟站台首頁
+  - 動作：開啟網站首頁
   - 結果：首頁列出兩份簡報的標題
 - 情境：從首頁開啟簡報
   - 前提：首頁列出一份標題為「範例」的簡報
   - 動作：點選「範例」
   - 結果：開啟這份簡報，畫面顯示第一頁
 
-#### DIST-R4 站台部署在子路徑下也能播放
+#### DIST-R4 網站部署在子路徑下也能播放
 
-站台部署在網域的子路徑下（例如 `https://bingyangchen.github.io/diapo/`）時，首頁與每份簡報都能正常開啟。
+網站部署在網域的子路徑下（例如 `https://bingyangchen.github.io/diapo/`）時，首頁與每份簡報都能正常開啟。
 
 - 情境：在子路徑下開啟
-  - 前提：站台的檔案放在 static server 的 `/diapo/` 路徑下
+  - 前提：網站的檔案放在 static server 的 `/diapo/` 路徑下
   - 動作：開啟 `/diapo/`，再點選一份簡報
   - 結果：首頁列出簡報標題，點選後畫面顯示那份簡報的第一頁
 - 情境：部署到 GitHub Pages
@@ -147,22 +147,22 @@ depends_on: []
   - 動作：等 GitHub Actions 部署完成後，開啟 `https://bingyangchen.github.io/diapo/`，再點選一份簡報
   - 結果：首頁列出簡報標題，點選後畫面顯示那份簡報的第一頁
 
-#### DIST-R5 不發布的簡報不進站台
+#### DIST-R5 不發布的簡報不出現在網站上
 
-`deck.json` 把 `publish` 設成 `false` 的簡報（沒有設定時視為 `true`），不會出現在部署到站台的檔案與首頁裡，在本機建置時則照常建置。
+`deck.json` 把 `publish` 設成 `false` 的簡報（沒有設定時視為 `true`），不會出現在部署到網站的檔案與首頁裡，在本機建置時則照常建置。
 
 - 情境：部署時排除
   - 前提：一份簡報的 `deck.json` 設定 `publish: false`
-  - 動作：建置要部署的站台
-  - 結果：站台的檔案裡沒有這份簡報的簡報包，首頁也沒有列出這份簡報
+  - 動作：建置要部署的網站
+  - 結果：網站的檔案裡沒有這份簡報的簡報包，首頁也沒有列出這份簡報
 - 情境：本機建置時保留
   - 前提：一份簡報的 `deck.json` 設定 `publish: false`
   - 動作：在本機建置
   - 結果：產生這份簡報的簡報包，首頁也列出這份簡報
 - 情境：沒有設定 publish
   - 前提：一份簡報的 `deck.json` 沒有 `publish` 欄位
-  - 動作：建置要部署的站台
-  - 結果：站台包含這份簡報的簡報包，首頁也列出這份簡報
+  - 動作：建置要部署的網站
+  - 結果：網站包含這份簡報的簡報包，首頁也列出這份簡報
 
 > 設計理由：GitHub Free 只能從 public repo 發布 Pages，而 private repo 發布出去的 Pages 仍然是公開網站，只有 Enterprise Cloud 能限制存取，所以目前所有簡報都公開部署。之後有不能公開的簡報時，把 repo 改成 private，再設定 `publish: false`。曾考慮部署到有存取控制的主機，例如 Cloudflare Pages 搭配 Cloudflare Access，目前沒有需要保密的簡報，所以不採用。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
@@ -179,19 +179,19 @@ depends_on: []
   - 動作：建置
   - 結果：建置成功
 
-> 設計理由：圖片、影片等素材直接 commit 進 git。不論素材有沒有用 Git LFS 存放，GitHub Pages 的站台上限都是 1 GB，而且每次部署時 GitHub Actions 下載 Git LFS 的檔案都會消耗 Git LFS 的頻寬額度，所以不採用 Git LFS。單檔上限定在 25 MB，是因為 Cloudflare Pages 的單檔上限也是 25 MB，之後站台超過 1 GB 要換主機時，所有素材都能直接搬過去。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+> 設計理由：圖片、影片等素材直接 commit 進 git。不論素材有沒有用 Git LFS 存放，GitHub Pages 的網站大小上限都是 1 GB，而且每次部署時 GitHub Actions 下載 Git LFS 的檔案都會消耗 Git LFS 的頻寬額度，所以不採用 Git LFS。單檔上限定在 25 MB，是因為 Cloudflare Pages 的單檔上限也是 25 MB，之後網站超過 1 GB 要換主機時，所有素材都能直接搬過去。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
-#### DIST-R7 站台超過 800 MB 時顯示警告
+#### DIST-R7 網站超過 800 MB 時顯示警告
 
-建置要部署的站台時，如果站台的檔案總共超過 800 MB，建置照常完成，但會顯示警告，寫出站台的總大小與 GitHub Pages 的 1 GB 上限。
+建置要部署的網站時，如果網站的檔案總共超過 800 MB，建置照常完成，但會顯示警告，寫出網站的總大小與 GitHub Pages 的 1 GB 上限。
 
-- 情境：站台超過 800 MB
+- 情境：網站超過 800 MB
   - 前提：所有發布的簡報包加起來是 850 MB
-  - 動作：建置要部署的站台
+  - 動作：建置要部署的網站
   - 結果：建置成功，並顯示警告
-- 情境：站台在 800 MB 以內
+- 情境：網站在 800 MB 以內
   - 前提：所有發布的簡報包加起來是 100 MB
-  - 動作：建置要部署的站台
+  - 動作：建置要部署的網站
   - 結果：建置成功，沒有警告
 
 ## 決策
@@ -223,10 +223,10 @@ depends_on: []
 - 結論：固定 1920×1080 畫布，比例不合的部分顯示黑邊。之後真的需要 4:3 的簡報時，再加比例設定。
 - 併入：playback.md#PLAY-R2
 
-### 站台要不要限制存取
+### 網站要不要限制存取
 
 - 選項：所有簡報公開部署到 GitHub Pages；部署到有存取控制的主機。
-- 結論：公開部署，並提供 `publish` 欄位，讓之後不能公開的簡報可以排除在站台外。
+- 結論：公開部署，並提供 `publish` 欄位，讓之後不能公開的簡報可以排除在網站外。
 - 併入：distribution.md#DIST-R5
 
 ### 大型素材怎麼存
@@ -268,24 +268,24 @@ decks/
 src/                     播放器、框架、Vite plugin
 e2e/                     Playwright 測試
 dist/                    建置產物
-  index.html             站台首頁
+  index.html             網站首頁
   <deck-id>/             簡報包
 ```
 
-建置流程如下。本機建置與建置要部署的站台走同一條流程，差別只在要部署時會排除不發布的簡報，並檢查站台的總大小。
+建置流程如下。本機建置與建置要部署的網站走同一條流程，差別只在要部署時會排除不發布的簡報，並檢查網站的總大小。
 
 ```mermaid
 flowchart TD
-  start("讀取 decks/ 底下的每份簡報") --> deploy1{"建置要部署的站台？"}
+  start("讀取 decks/ 底下的每份簡報") --> deploy1{"建置要部署的網站？"}
   deploy1 -- 是 --> filter("排除 publish: false 的簡報")
   deploy1 -- 否 --> size{"有檔案超過 25 MB？"}
   filter --> size
   size -- 是 --> fail("建置失敗")
   size -- 否 --> vite("每份簡報各跑一次 Vite 建置，輸出 IIFE")
   vite --> rewrite("改寫 HTML 的 script 與 link 標籤")
-  rewrite --> index("產生站台首頁 dist/index.html")
-  index --> deploy2{"建置要部署的站台？"}
-  deploy2 -- 是 --> total("站台超過 800 MB 時顯示警告")
+  rewrite --> index("產生網站首頁 dist/index.html")
+  index --> deploy2{"建置要部署的網站？"}
+  deploy2 -- 是 --> total("網站超過 800 MB 時顯示警告")
   deploy2 -- 否 --> done("完成")
   total --> done
 ```
@@ -294,7 +294,7 @@ flowchart TD
 - `make dev` 用 Vite 的 dev server 透過 HTTP 載入 ES module，和建置產物的載入方式不同，所以 `file://` 相容性只能在建置產物上驗證，E2E 測試一律測建置產物。
 - Playwright 內建的 Firefox 預設把 `security.fileuri.strict_origin_policy` 設成 `false`，和真正的 Firefox 相反。E2E 測試要把這個設定改回 `true`，Firefox 的 `file://` 測試結果才會和真正的 Firefox 一致。
 - `architecture.md` 會記下在 Chromium、Firefox、WebKit 實測過的 `file://` 行為，讓之後的 plan 不必重新查證：外部 module script、`import()`、`fetch()` 與帶 `crossorigin` 的標籤會被擋下；字型用相對路徑可以載入；`localStorage` 在 Chromium 與 WebKit 由所有 `file://` 網頁共用，在 Firefox 則每個檔案路徑各自一份；兩個視窗之間用 `window.open` 加 `postMessage` 可以通訊，`BroadcastChannel` 在 WebKit 收不到訊息。
-- 部署用 GitHub Actions 的 Pages 部署流程，專案擁有者已經把 Pages 的來源設成 GitHub Actions。站台會在實作 PR merge 到 `main` 後第一次部署。
+- 部署用 GitHub Actions 的 Pages 部署流程，專案擁有者已經把 Pages 的來源設成 GitHub Actions。網站會在實作 PR merge 到 `main` 後第一次部署。
 
 ## 驗證方式
 
@@ -319,8 +319,8 @@ flowchart TD
 | DIST-R5 情境：沒有設定 publish | integration |
 | DIST-R6 情境：檔案超過上限 | unit |
 | DIST-R6 情境：檔案剛好在上限內 | unit |
-| DIST-R7 情境：站台超過 800 MB | unit |
-| DIST-R7 情境：站台在 800 MB 以內 | unit |
+| DIST-R7 情境：網站超過 800 MB | unit |
+| DIST-R7 情境：網站在 800 MB 以內 | unit |
 
 ## 還沒定案的問題
 
