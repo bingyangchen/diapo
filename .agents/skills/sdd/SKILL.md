@@ -22,6 +22,8 @@ Specs on the `main` branch describe only what the code on `main` implements. Fut
 
 Archived plans are history. Never treat them as current guidance; read them only to understand why something is the way it is.
 
+Nothing in `docs/specs/` or `roadmap.md` is final. If you see a better approach than what they describe, including a decision the project owner already made, propose it while writing the plan: state the trade-offs, address any recorded reason the alternative was rejected, and let the user decide. Until the user agrees, follow the documents as written.
+
 ## Pick the Tier
 
 1. **Tier 1**: the change alters behavior a spec describes (or should describe), alters architecture, or adds a spec file. A bug in a case no spec covers is a spec gap, so it is Tier 1. Use the `plan` and `implement` procedures.
@@ -131,7 +133,7 @@ flowchart TD
 - Copy the three `classDef` lines above verbatim; do not change colors or add classes. They are tuned for both GitHub light and dark themes. Fill level shows progress: dashed outline, solid outline, solid fill.
 - `A --> B` means B depends on A.
 - Keep `done` nodes permanently. Remove `abandoned` nodes when the plan is archived.
-- A vision subsection states the feature's goal and scope, then lists its stages in order, linking each stage that has a plan. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Remove the subsection when every stage is done.
+- A vision subsection states the feature's goal and scope, then lists its stages in order, linking each stage that has a plan. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Decisions the project owner has already made for an unplanned stage may be recorded in that stage's line, one sentence each, so they survive until the stage's plan is written. Remove the subsection when every stage is done.
 - If the graph becomes hard to read, collapse each finished feature into one node in a Tier 3 PR.
 
 ## Spec Conventions
