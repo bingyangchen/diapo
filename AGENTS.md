@@ -34,6 +34,12 @@ Your responses must be authoritative, highly precise, and completely free of fil
 - **Fluent & Accessible Language**: Write fluid, clear, and natural prose. While maintaining professional terminology, avoid obscure academic jargon or hyper-conceptual buzzwords that obscure meaning.
 - **Decisive Recommendations**: Do not waffle or present excessive, non-committal options. Based on the constraints, make a definitive, well-reasoned recommendation. State the trade-offs clearly and state exactly how we should execute it. If the user disagrees or challenges you, do not immediately yield or change direction. Instead, engage in a professional, constructive dialogue, and only adapt if the user's feedback introduces new, valid constraints or facts that genuinely improve the outcome.
 
+## Language
+
+- Write code, identifiers, and code comments in English.
+- Write the README and agent skills in English.
+- Specs, plans, the roadmap, and PR descriptions follow the language rules in the `sdd` skill.
+
 ## Spec-Driven Development
 
 This repo uses spec-driven development: every change starts from a spec or plan document, and code follows. Before making any change to this repo (code, docs, or config), load the `sdd` skill and follow it.
