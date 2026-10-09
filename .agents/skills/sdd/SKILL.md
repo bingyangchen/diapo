@@ -26,7 +26,7 @@ Archived plans are history. Never treat them as current guidance; read them only
 
 1. **Tier 1**: the change alters behavior a spec describes (or should describe), alters architecture, or adds a spec file. A bug in a case no spec covers is a spec gap, so it is Tier 1. Use the `plan` and `implement` procedures.
 2. **Tier 2**: behavior-preserving but non-trivial: a bug fix that restores spec'd behavior, a refactor, a performance change, dev tooling or CI config, a minor or major dependency bump. Use the `change` procedure.
-3. **Tier 3**: on the trivial whitelist below. Open a PR directly; no template. The whitelist is exhaustive:
+3. **Tier 3**: on the trivial whitelist below. No plan and no PR template; open a PR once the user instructs a push. The whitelist is exhaustive:
    - Typos, punctuation, and formatter output.
    - Comment-only changes.
    - Patch-level dependency bumps.
@@ -39,6 +39,10 @@ When unsure, take the higher tier.
 ## Rules That Apply Everywhere
 
 - Never push to `main`. Never merge a PR. The user merges; a merge is the user's approval.
+- Commit and push only when the user explicitly instructs it. When a procedure step below reaches a commit, a push, or a PR action that needs one, stop, tell the user what is ready, and wait. Opening a PR needs a push, so it waits too.
+- Assign every PR you open to the user who directed the work: `gh pr create --assignee @me`, which resolves to the account `gh` is logged in as. If `gh` is logged in as a bot or someone other than that user, ask the user who to assign.
+- Every time you push new content to a branch that has an open PR, check whether the PR title and description still match the branch's latest state, and update them if they do not.
+- Right before every update to a PR title or description, fetch the current version from GitHub (`gh pr view <number> --json title,body`) and apply your edits on top of it, no matter how well you remember what you last wrote. Other people may be editing the same PR at the same time.
 - A plan's frontmatter `status` is the source of truth. Whenever a status changes, update `roadmap.md` in the same PR. Change statuses only through the procedures below.
 - Never edit positioning, target users, scope, or non-goals in `product.md` unless the user explicitly asks. If a plan would conflict with `product.md`, stop and tell the user. Glossary additions or changes go in the plan's "Spec 變更" section.
 - After every implementation PR merges, `main` must work. Hide unfinished features behind a feature flag. There is no size cap on a plan; split by what can ship on its own.
@@ -69,13 +73,13 @@ When unsure, take the higher tier.
    - "驗證方式" marks every scenario of every added or modified requirement with how it will be verified: `unit`, `integration`, `e2e`, or `手動`. Do not name tests or write manual steps; the implementation does not exist yet. Manual steps go in the implementation PR.
    - "還沒定案的問題" must be empty before asking the user to merge. Ask the user about anything left there.
 5. Update `roadmap.md` (see "Roadmap Conventions"): add the node as `approved`, or rename the matching `unplanned` node to `PNNNN`; add edges from `depends_on`; link the plan from the feature's vision section.
-6. Open the PR. Title: `[plan NNNN] <English title>`. Body: the plan's "目標" paragraph and a link to the plan file. Then stop and wait for the user to merge.
+6. Tell the user the plan is ready and wait. When the user instructs a push, commit, push, and open the PR. Title: `[plan NNNN] <English title>`. Body: the plan's "目標" paragraph and a link to the plan file. Then stop and wait for the user to merge.
 
 ## Procedure: Implement <id>
 
 Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, and every plan in `depends_on` is archived as `done`. Otherwise stop and tell the user.
 
-1. Create branch `impl/NNNN-slug` from up-to-date `main`, push it, and open a draft PR right away. Title: `[impl NNNN] <English title>`. Body: `templates/pr-impl.md`.
+1. Create branch `impl/NNNN-slug` from up-to-date `main`. On the first push the user instructs, open a draft PR. Title: `[impl NNNN] <English title>`. Body: `templates/pr-impl.md`.
 2. Apply the plan's spec changes to the spec files first, then write code against the updated specs.
 3. If the plan turns out wrong, change the plan and specs in this PR and keep going. Record every deviation in the PR body under "與 Plan 不同的地方", split into "行為改變" and "實作細節".
 4. Run all automated tests and make them pass. Then review your own diff against the plan's "驗證方式": every scenario marked for automated testing must have a test at the stated level; add any that are missing. In the PR body's "手動檢查", write one checklist item per scenario marked `手動` in the plan, no more and no fewer, each with concrete steps against the actual implementation and the expected result taken from the scenario. Run every check you can (start the app, call the API, drive a browser) and tick it only when it passes; fix failures before moving on. Leave a check unticked only if you cannot run it, and state why under the item so the user can run it. If manual checks change during implementation, update the plan's "驗證方式" in this PR first and note it under "與 Plan 不同的地方". Do not list automated tests or their results in the PR body; reviewers read the tests themselves, and CI reports results.
@@ -86,13 +90,13 @@ Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, 
    - The architecture impact from "做法要點", reflected in `architecture.md`.
    - The plan with `status: done`, moved to `docs/plans/archive/`.
    - `roadmap.md` with the node switched to `done` and the vision section's link pointing to the archive path. If every stage of that feature is now done, remove the feature's vision section; keep its nodes in the graph.
-6. Run `gh pr ready`, tell the user, and stop. Do not merge.
+6. Tell the user the work is ready and stop. When the user instructs a push, commit, push, and run `gh pr ready`. Do not merge.
 
 ## Procedure: Change
 
-1. Create branch `change/slug` from up-to-date `main`, push it, and open a draft PR with `templates/pr-change.md` filled in ("問題", "原因", "做法", "驗證方式") before writing any code.
+1. Create branch `change/slug` from up-to-date `main`. Before writing any code, fill in `templates/pr-change.md` ("問題", "原因", "做法", "驗證方式") as the PR description and show it to the user. On the first push the user instructs, open a draft PR with it.
 2. Implement. If the change turns out to alter spec'd behavior, stop: it is Tier 1.
-3. Run all automated tests and make them pass. Complete the manual checklist in "驗證方式" the same way as step 4 of "Procedure: Implement", run `gh pr ready`, tell the user, and stop.
+3. Run all automated tests and make them pass. Complete the manual checklist in "驗證方式" the same way as step 4 of "Procedure: Implement". Tell the user the work is ready and stop. When the user instructs a push, commit, push, and run `gh pr ready`.
 
 ## Procedure: Abandon <id>
 
@@ -101,7 +105,7 @@ Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, 
   1. Close any open `[impl NNNN]` PR.
   2. Create branch `abandon/NNNN-slug`. Set `status: abandoned`, add one line under the title stating why and which plan replaces it (if any), and move the file to `docs/plans/archive/`.
   3. In `roadmap.md`, remove the node and its edges, reconnect dependents to the replacing plan if there is one, and update the vision section.
-  4. Open a PR titled `[abandon NNNN] <English title>` and stop.
+  4. Tell the user the change is ready and wait. When the user instructs a push, commit, push, and open a PR titled `[abandon NNNN] <English title>`; then stop.
 
 ## Roadmap Conventions
 
