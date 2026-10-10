@@ -19,4 +19,4 @@ prefix: PREFIX
   - 動作：
   - 結果：
 
-> 設計理由：<用 1 到 3 行寫理由，以及放棄了哪些做法。>完整討論見 [NNNN](../plans/archive/NNNN-slug.md)。
+> 設計理由：<寫選擇的理由，以及每個放棄的做法為什麼不採用。>完整討論見 [NNNN](../plans/archive/NNNN-slug.md)。

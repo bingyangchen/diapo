@@ -1,0 +1,3 @@
+# Markdown follows .markdownlint.json. Prettier would pad every table cell to align columns.
+*.md
+pnpm-lock.yaml
