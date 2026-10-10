@@ -1,0 +1,29 @@
+{
+  "printWidth": 88,
+  "tabWidth": 2,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "objectWrap": "collapse",
+  "endOfLine": "lf",
+  "plugins": [
+    "prettier-plugin-tailwindcss"
+  ],
+  "tailwindStylesheet": "./src/player/style.css",
+  "overrides": [
+    {
+      "files": "*.json",
+      "excludeFiles": "tsconfig*.json",
+      "options": {
+        "parser": "json-stringify"
+      }
+    },
+    {
+      "files": "tsconfig*.json",
+      "options": {
+        "objectWrap": "preserve"
+      }
+    }
+  ]
+}

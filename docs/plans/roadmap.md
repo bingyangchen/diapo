@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart TD
-  P0001("0001 專案地基<br/>已核准"):::approved
+  P0001("0001 專案地基<br/>已完成"):::done
   navigation("換頁與操作<br/>未規劃"):::unplanned
   steps("頁內分步<br/>未規劃"):::unplanned
   transitions("換頁與進場動畫<br/>未規劃"):::unplanned
@@ -49,10 +49,6 @@ flowchart TD
 ```
 
 ## 功能願景
-
-### 專案地基
-
-建立工具鏈，以及一個在三種場地（GitHub Pages、本機 static server、直接開啟 `file://`）都能播放的骨架，由 [0001 專案地基：工具鏈與可播放的骨架](0001-project-foundation.md) 完成。
 
 ### 播放器
 

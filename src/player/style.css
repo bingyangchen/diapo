@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* The build appends an @source rule for the deck directory being built. */
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: black;
+}

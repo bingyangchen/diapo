@@ -70,7 +70,7 @@ When unsure, take the higher tier.
 4. Copy `templates/plan.md` to `docs/plans/NNNN-slug.md` and fill it in:
    - `specs` lists every spec file the plan touches; `depends_on` lists plan IDs that must be `done` first.
    - "Spec 變更" refers to requirements by ID, grouped by spec file. Write new requirements in full, in the spec format.
-   - Every decision ends with a "併入" line naming where its 1 to 3 line summary goes, or "無". Promote a decision to a spec only if a future agent reading the spec would plausibly re-propose the rejected option.
+   - Every decision ends with a "併入" line naming where its rationale goes (see "Spec Conventions"), or "無". Promote a decision to a spec only if a future agent reading the spec would plausibly re-propose the rejected option.
    - "做法要點" covers only what the user must know before approving: architecture impact, and risky or hard-to-reverse operations (data migration, breaking changes, deploy order). No step-by-step implementation list.
    - "驗證方式" marks every scenario of every added or modified requirement with how it will be verified: `unit`, `integration`, `e2e`, or `手動`. Do not name tests or write manual steps; the implementation does not exist yet. Manual steps go in the implementation PR.
    - "還沒定案的問題" must be empty before asking the user to merge. Ask the user about anything left there.
@@ -88,7 +88,7 @@ Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, 
 5. Before marking the PR ready, make sure it contains all of the following:
    - Every spec change, including deviations.
    - The code.
-   - Every decision with a "併入" target, summarized in 1 to 3 lines next to the related requirement or architecture section, linking to the plan's archive path.
+   - Every decision with a "併入" target, written as a rationale (see "Spec Conventions") next to the related requirement or architecture section.
    - The architecture impact from "做法要點", reflected in `architecture.md`.
    - The plan with `status: done`, moved to `docs/plans/archive/`.
    - `roadmap.md` with the node switched to `done` and the vision section's link pointing to the archive path. If every stage of that feature is now done, remove the feature's vision section; keep its nodes in the graph.
@@ -141,4 +141,5 @@ flowchart TD
 - One spec file per product capability that a user would recognize (`auth.md`, `billing.md`), not per page or technical module. Split a file into smaller capabilities when it grows too large.
 - The frontmatter declares `prefix` (for example `AUTH`). Never change it, even if the file is renamed or split, so existing IDs stay valid.
 - Requirement format: see `templates/spec.md`. IDs are `<PREFIX>-R<n>` and are never reused, even after removal.
-- Rationale sits next to the requirement or architecture section it explains: 1 to 3 lines with the reason and the rejected options, linking to the archived plan. Behavior trade-offs go in the capability spec; technical trade-offs go in `architecture.md`.
+- Rationale sits next to the requirement or architecture section it explains, linking to the archived plan. Write the reason for the chosen option and, for each rejected option, the facts that rule it out, so a future agent does not re-propose it. Leave out what mattered only while deciding: the option-by-option comparison, research notes, and anything the reader can infer from the choice itself. Behavior trade-offs go in the capability spec; technical trade-offs go in `architecture.md`.
+- Write every rationale, in capability specs and `architecture.md` alike, as a blockquote that starts with `> 設計理由：` and ends with `完整討論見 [NNNN](../plans/archive/NNNN-slug.md)。`, so readers recognize it at a glance and one grep finds them all. Each rationale covers one decision and follows the paragraph, table, or heading it explains, so the reader knows what it is about before reading it. Never stack rationales back to back: when several would end up adjacent, give each its own subsection under a heading that names what it explains.
