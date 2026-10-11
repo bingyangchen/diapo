@@ -22,6 +22,7 @@
     "skipLibCheck": true
   },
   "include": [
+    "src/framework",
     "src/player",
     "src/site",
     "src/virtual-modules.d.ts",

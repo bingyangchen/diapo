@@ -3,7 +3,8 @@ import path from "node:path";
 import type { Locator } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
-import { E2E_OUTPUT, makeFileUrl, SECOND_DECK_TITLE } from "./support.ts";
+import type { Box } from "./support.ts";
+import { E2E_OUTPUT, makeFileUrl, roundBox, SECOND_DECK_TITLE } from "./support.ts";
 
 const EXAMPLE_URL = makeFileUrl(path.join(E2E_OUTPUT, "example", "index.html"));
 const SECOND_DECK_URL = makeFileUrl(path.join(E2E_OUTPUT, "second-deck", "index.html"));
@@ -77,8 +78,6 @@ test.describe("PLAY-R3 the browser tab shows the deck title", () => {
   });
 });
 
-type Box = { x: number; y: number; width: number; height: number };
-
 async function expectBox(locator: Locator, expected: Box): Promise<void> {
   await expect
     .poll(async () => {
@@ -86,15 +85,6 @@ async function expectBox(locator: Locator, expected: Box): Promise<void> {
       return box && roundBox(box);
     })
     .toEqual(expected);
-}
-
-function roundBox(box: Box): Box {
-  return {
-    x: Math.round(box.x),
-    y: Math.round(box.y),
-    width: Math.round(box.width),
-    height: Math.round(box.height),
-  };
 }
 
 /** Returns the element's top-left corner as a fraction of the canvas size. */

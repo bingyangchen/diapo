@@ -1,9 +1,19 @@
 import path from "node:path";
 
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
-import { E2E_OUTPUT, makeFileUrl } from "./support.ts";
+import {
+  collectConsoleMessages,
+  E2E_OUTPUT,
+  expectSlide,
+  getBox,
+  getCenter,
+  makeDeckUrl,
+  makeFileUrl,
+  openDeck,
+  swipe,
+} from "./support.ts";
 
 // The `example` fixture deck plays intro, agenda, recap; `controls` has 12 slides, starting
 // with widgets, counter, and counter-again.
@@ -65,7 +75,7 @@ test.describe("NAV-R1 the URL hash records the current slide", () => {
 
 test.describe("NAV-R2 a hash that points to no slide", () => {
   test("opening an unknown slide shows the first slide and warns", async ({ page }) => {
-    const warnings = collectConsoleWarnings(page);
+    const warnings = collectConsoleMessages(page, "warning");
 
     await page.goto(makeDeckUrl("example", "#/old-name"));
 
@@ -74,17 +84,8 @@ test.describe("NAV-R2 a hash that points to no slide", () => {
     await expect.poll(() => warnings.join("\n")).toContain("#/old-name");
   });
 
-  test("opening a hash with an extra segment shows the first slide", async ({
-    page,
-  }) => {
-    await page.goto(makeDeckUrl("example", "#/agenda/2"));
-
-    await expectSlide(page, "Intro");
-    await expect(page).toHaveURL(/#\/intro$/);
-  });
-
   test("an unknown slide during playback keeps the current slide", async ({ page }) => {
-    const warnings = collectConsoleWarnings(page);
+    const warnings = collectConsoleMessages(page, "warning");
     await openDeck(page, "example");
     await page.keyboard.press("ArrowRight");
     await expectSlide(page, "Agenda");
@@ -328,6 +329,20 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
     await expect(page).toHaveURL(homeUrl);
   });
 
+  test("stepping within a slide adds no history entries", async ({ page }) => {
+    const homeUrl = makeFileUrl(path.join(E2E_OUTPUT, "index.html"));
+    await page.goto(homeUrl);
+    await page.getByRole("link", { name: "分步" }).click();
+    await expect(page).toHaveURL(/#\/intro$/);
+
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await expect(page).toHaveURL(/#\/intro\/2$/);
+    await page.goBack();
+
+    await expect(page).toHaveURL(homeUrl);
+  });
+
   test("back after End returns to the slide before the jump", async ({ page }) => {
     await openDeck(page, "example");
     await page.keyboard.press("ArrowRight");
@@ -368,6 +383,22 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
     await page.goBack();
 
     await expectSlide(page, "Intro");
+  });
+
+  test("back after a link returns to the step the link was clicked on", async ({
+    page,
+  }) => {
+    await page.goto(makeDeckUrl("steps", "#/list/2"));
+    await expect(page.getByText("Second point")).toBeVisible();
+
+    await page.getByRole("link", { name: "Recap" }).click();
+    await expectSlide(page, "Recap");
+    await page.goBack();
+
+    await expectSlide(page, "List");
+    await expect(page).toHaveURL(/#\/list\/2$/);
+    await expect(page.getByText("Second point")).toBeVisible();
+    await expect(page.getByText("Old conclusion")).toBeVisible();
   });
 });
 
@@ -879,19 +910,6 @@ test.describe("NAV-R14 holding a key down", () => {
   });
 });
 
-function makeDeckUrl(deckId: string, hash = ""): string {
-  return makeFileUrl(path.join(E2E_OUTPUT, deckId, "index.html")) + hash;
-}
-
-/**
- * Opens a deck at its first slide. The player writes the first slide's hash in the same
- * effect that starts listening for keys, so the deck takes input once the hash appears.
- */
-async function openDeck(page: Page, deckId: string): Promise<void> {
-  await page.goto(makeDeckUrl(deckId));
-  await expect(page).toHaveURL(/#\/[a-z0-9-]+$/);
-}
-
 /** Presses a key and holds it through `repeatCount` auto-repeats before releasing it. */
 async function holdKey(page: Page, key: string, repeatCount: number): Promise<void> {
   // Playwright sends every keydown after the first one with `repeat` set.
@@ -909,10 +927,6 @@ async function installPausedClock(page: Page): Promise<void> {
   await page.clock.pauseAt(1000);
 }
 
-async function expectSlide(page: Page, heading: string): Promise<void> {
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
-}
-
 async function expectFullscreen(page: Page, isFullscreen: boolean): Promise<void> {
   await expect(page.locator("html:fullscreen")).toHaveCount(isFullscreen ? 1 : 0);
 }
@@ -925,14 +939,6 @@ async function expectFullscreenButtonShown(
     "opacity",
     isShown ? "1" : "0",
   );
-}
-
-function collectConsoleWarnings(page: Page): string[] {
-  const warnings: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "warning") warnings.push(message.text());
-  });
-  return warnings;
 }
 
 /**
@@ -957,24 +963,11 @@ async function expectLastKeydownDefaultPrevented(
   );
 }
 
-async function getBox(
-  locator: Locator,
-): Promise<{ x: number; y: number; width: number; height: number }> {
-  const box = await locator.boundingBox();
-  if (box === null) throw new Error("Element is not visible");
-  return box;
-}
-
 async function clickCounterThreeTimes(page: Page): Promise<void> {
   for (let count = 0; count < 3; count++) {
     await page.getByRole("button", { name: `Count: ${count}` }).click();
   }
   await expect(page.getByRole("button", { name: "Count: 3" })).toBeVisible();
-}
-
-async function getCenter(locator: Locator): Promise<{ x: number; y: number }> {
-  const box = await getBox(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
 /** Returns the `data-testid` of the topmost element at a point in the viewport. */
@@ -985,59 +978,4 @@ async function getTestIdAt(
   return page.evaluate<string | null>(
     `document.elementFromPoint(${point.x}, ${point.y})?.getAttribute("data-testid") ?? null`,
   );
-}
-
-/**
- * Simulates a touch swipe with synthetic events in the order a real touch fires them:
- * pointerdown, then touchstart for each finger, one touchmove for all fingers, then
- * touchend for each finger. Real gestures on a touch screen are checked by hand on an iPad.
- * Needs `hasTouch: true`, without which Firefox has no `Touch` to build the events from.
- */
-async function swipe(
-  page: Page,
-  {
-    from = page.getByTestId("canvas"),
-    deltaX,
-    deltaY = 0,
-    fingers = 1,
-  }: { from?: Locator; deltaX: number; deltaY?: number; fingers?: 1 | 2 },
-): Promise<void> {
-  const start = await getCenter(from);
-  const startTouches = Array.from({ length: fingers }, (_, finger) => ({
-    identifier: finger,
-    clientX: start.x,
-    clientY: start.y + finger * 50,
-  }));
-  const endTouches = startTouches.map((touch) => ({
-    ...touch,
-    clientX: touch.clientX + deltaX,
-    clientY: touch.clientY + deltaY,
-  }));
-  await from.dispatchEvent("pointerdown", {
-    pointerType: "touch",
-    isPrimary: true,
-    clientX: start.x,
-    clientY: start.y,
-  });
-  for (const [finger, touch] of startTouches.entries()) {
-    const touches = startTouches.slice(0, finger + 1);
-    await from.dispatchEvent("touchstart", {
-      touches,
-      targetTouches: touches,
-      changedTouches: [touch],
-    });
-  }
-  await from.dispatchEvent("touchmove", {
-    touches: endTouches,
-    targetTouches: endTouches,
-    changedTouches: endTouches,
-  });
-  for (const [finger, touch] of endTouches.entries()) {
-    const touches = endTouches.slice(finger + 1);
-    await from.dispatchEvent("touchend", {
-      touches,
-      targetTouches: touches,
-      changedTouches: [touch],
-    });
-  }
 }

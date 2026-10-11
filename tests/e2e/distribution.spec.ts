@@ -66,6 +66,7 @@ test.describe("DIST-R3 the site's home page lists published decks", () => {
       "操作",
       "範例",
       SECOND_DECK_TITLE,
+      "分步",
     ]);
   });
 
@@ -93,6 +94,7 @@ test.describe("DIST-R4 the site plays under a subpath", () => {
       "操作",
       "範例",
       SECOND_DECK_TITLE,
+      "分步",
     ]);
 
     await page.getByRole("link", { name: "範例" }).click();
