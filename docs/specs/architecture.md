@@ -44,6 +44,13 @@
 
 > 設計理由：E2E test 要先 build 測試用的簡報，執行時間也比較長，所以不放進 `make check`。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
+以下是實測過的 Playwright 行為與限制，寫 plan 決定情境用 E2E test 還是手動檢查時，不必重新查證：
+
+- 在 Playwright 裡按 F5 或 Shift+F5 時，Chromium、Firefox、WebKit 都不會重新載入網頁，所以 E2E test 驗證不了按 F5 會不會重新載入網頁。
+- 全螢幕時，headless 的 Chromium 收到 Esc 不會離開全螢幕。
+- E2E test 只能送出模擬的 touch 與 pointer 事件，這些事件不會經過瀏覽器處理手勢的流程，所以真實手勢的行為要在觸控裝置上手動檢查。
+- 全螢幕時用瀏覽器的上一頁回到同一份文件的另一個 hash，headless 的 Chromium、Firefox、WebKit 都維持全螢幕。
+
 ## 模組劃分
 
 ```text
@@ -88,7 +95,7 @@
 
 - `src/build/cli.ts` 是 `make build`、`make build-site` 與 `make dev` 的入口。
 - `src/build/plugins.ts` 的 Vite plugin 提供兩個 virtual module：`virtual:deck` 依 `deck.json` 的順序匯入一份簡報的每一頁，`virtual:site` 提供網站首頁要列出的 deck ID 與標題。
-- `src/player/` 是 Vite 的入口 HTML 與播放器元件，負責把畫布縮放到視窗大小（PLAY-R2）。
+- `src/player/` 是 Vite 的入口 HTML 與播放器。
 - `src/site/` 是網站首頁的入口 HTML 與 React 元件。
 
 > 設計理由：網站首頁用 React 與 Vite build，因為 roadmap 的「網站首頁」要沿用簡報的主題，首頁之後一定要經過 Vite build；曾考慮由 build script 直接產生靜態 HTML。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
@@ -96,6 +103,10 @@
 `make dev DECK=<deck-id>` 啟動的 Vite dev server 只預覽一份簡報，和 build 這份簡報時用同一份 Vite 設定。`Makefile` 的 `DECKS_DIR` 變數預設是 `decks`；開發播放器時，執行 `make dev DECKS_DIR=tests/fixtures/decks DECK=<deck-id>`，用測試用的簡報預覽。
 
 > 設計理由：每次 Vite build 只處理一份簡報，如果要讓一個 dev server 包含所有簡報，得另外寫 middleware 把 `/<deck-id>/` 對應到各自的入口，這段程式碼在 build 裡沒有對應的部分，所以 dev server 一次只預覽一份。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+
+### 播放器的狀態
+
+播放器把目前的頁面記錄在網址的 hash（NAV-R1），黑畫面與輸入中的頁碼只存在記憶體，播放器不使用 `localStorage`。
 
 ## 資料流
 
@@ -127,7 +138,11 @@ flowchart TD
 
 ## 部署方式
 
-同一個 slidetray 可以部署在 GitHub Pages、用 `make serve` 在本機的 static server 播放，或直接用瀏覽器開啟 `file://` 的 `index.html`。從 `file://` 開啟的網頁 origin 是 `null`，所以 build 照下面的方式產生 slidetray：
+同一個 slidetray 可以部署在 GitHub Pages、用 `make serve` 在本機的 static server 播放，或直接用瀏覽器開啟 `file://` 的 `index.html`。
+
+### 從 `file://` 開啟 Slidetray
+
+從 `file://` 開啟的網頁 origin 是 `null`，所以 build 照下面的方式產生 slidetray：
 
 - Vite 輸出 IIFE 格式的單一 JS 檔，再把 HTML 裡的 `<script type="module" crossorigin>` 改寫成 `<script defer>`，並移除 `<link>` 標籤的 `crossorigin` 屬性。
 - Vite 在 IIFE 格式下預設會把 CSS 寫進 JS，由 JS 在執行時把 CSS 插入頁面，這時 CSS 裡 `url()` 的相對路徑會改以 HTML 的位置計算，所以 build 把 CSS 輸出成獨立的檔案。
@@ -142,8 +157,11 @@ flowchart TD
 - 字型用相對路徑可以載入。
 - `localStorage` 在 Chromium 與 WebKit 由所有 `file://` 網頁共用，在 Firefox 則每個檔案路徑各自有一份。
 - 兩個視窗之間用 `window.open` 加 `postMessage` 可以通訊，`BroadcastChannel` 在 WebKit 收不到訊息。
+- 只改 hash 時，`location.hash =`、`location.replace()`、`history.pushState()` 與 `history.replaceState()` 都可以使用。
 
 `make dev` 用 Vite 的 dev server 透過 HTTP 載入 ES module，載入方式和 build 出來的檔案不同，所以 E2E test 一律測 build 出來的檔案。Playwright 內建的 Firefox 預設把 `security.fileuri.strict_origin_policy` 設成 `false`，和正式版的 Firefox 相反，所以 `playwright.config.ts` 把這個設定改回 `true`。
+
+### GitHub Actions 的 Workflow
 
 GitHub Actions 的 workflow 放在 `.github/workflows/`：
 

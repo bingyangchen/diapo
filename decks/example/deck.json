@@ -1,6 +1,17 @@
 {
   "title": "diapo 範例簡報",
   "slides": [
-    "cover"
+    "cover",
+    "shortcuts",
+    "jumping",
+    "form",
+    "arrow-pad",
+    "touch",
+    "carousel",
+    "layers",
+    "counter",
+    "counter-again",
+    "fullscreen",
+    "finale"
   ]
 }

@@ -122,7 +122,7 @@ describe("FRAME-R3 deck IDs and slide IDs are lowercase kebab-case", () => {
 });
 
 describe("FRAME-R4 a slide ID appears in slides only once", () => {
-  test("a repeated slide ID fails the build and names the slide", () => {
+  test("a repeated slide ID fails the build and explains how to show a slide twice", () => {
     const text = JSON.stringify({
       title: "Talk",
       slides: ["intro", "agenda", "intro"],
@@ -131,6 +131,9 @@ describe("FRAME-R4 a slide ID appears in slides only once", () => {
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(
       'decks/talk/deck.json: slide "intro" is listed more than once',
+    );
+    expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(
+      'export { default } from "./intro";',
     );
   });
 });

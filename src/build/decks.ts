@@ -91,7 +91,9 @@ export function parseDeckConfig(text: string, displayPath: string): DeckConfig {
     }
     if (seenSlideIds.has(slideId)) {
       throw new BuildError(
-        `${displayPath}: slide "${slideId}" is listed more than once`,
+        `${displayPath}: slide "${slideId}" is listed more than once. To show it twice, ` +
+          `add a slide file such as slides/${slideId}-again.tsx containing ` +
+          `\`export { default } from "./${slideId}";\` and list that slide ID instead.`,
       );
     }
     seenSlideIds.add(slideId);

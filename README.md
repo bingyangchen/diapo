@@ -88,6 +88,19 @@ export { default } from "./agenda";
 - **On your laptop without a network:** run `make build`, then `make serve`.
 - **On a venue computer from a USB drive:** run `make build`, copy `dist/<deck-id>/` to the drive, and open its `index.html` in a browser.
 
+While a deck plays, the URL hash names the current slide (`#/intro`), so a reload or a shared link opens the same slide. A presenter remote works like a keyboard:
+
+| Action | Keys |
+| --- | --- |
+| Next slide | →, ↓, Page Down, Space, Enter, or swipe left |
+| Previous slide | ←, ↑, Page Up, Shift+Space, Backspace, or swipe right |
+| First or last slide | Home or End |
+| Go to slide _n_ | Type _n_, then Enter |
+| Black screen | B or . |
+| Fullscreen | F, F5, or the button in the bottom-right corner |
+
+After Home, End, or a typed slide number, the browser's back button returns to the slide you jumped from.
+
 ## Deployment
 
 Every merge into `main` runs `make build-site` and deploys `dist/` to GitHub Pages.

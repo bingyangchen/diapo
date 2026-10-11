@@ -10,11 +10,11 @@ prefix: PLAY
 
 ### PLAY-R1 開啟簡報時顯示第一頁
 
-開啟一份簡報時，畫面顯示簡報設定檔 `deck.json` 裡頁面順序的第一頁。
+開啟一份簡報、網址的 hash 沒有指定頁面時，畫面顯示簡報設定檔 `deck.json` 裡頁面順序的第一頁。網址的 hash 指定頁面時的行為寫在 [navigation.md](navigation.md) 的 NAV-R1 與 NAV-R2。
 
 - 情境：開啟簡報
   - 前提：`deck.json` 依序列出 `intro`、`agenda` 兩頁
-  - 動作：開啟這份簡報
+  - 動作：開啟這份簡報，網址沒有 hash
   - 結果：畫面顯示 `intro` 這一頁
 
 ### PLAY-R2 畫布等比縮放

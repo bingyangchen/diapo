@@ -85,14 +85,14 @@ Deck ID 與 slide ID 只能用小寫英數字與 `-`，而且 `-` 不能出現�
 
 ### FRAME-R4 同一個 Slide ID 在 `slides` 裡只能出現一次
 
-同一個 slide ID 在 `deck.json` 的 `slides` 裡只能出現一次。同一頁要在簡報裡出現兩次時，另外建一個 TSX 檔重新匯出那一頁，例如 `agenda` 要出現兩次時，新增 `slides/agenda-recap.tsx`，內容寫成 `export { default } from "./agenda";`，再把 `agenda-recap` 列進 `slides`。
+同一個 slide ID 在 `deck.json` 的 `slides` 裡只能出現一次。同一頁要在簡報裡出現兩次時，另外建一個 TSX 檔重新匯出那一頁，例如 `agenda` 要出現兩次時，新增 `slides/agenda-recap.tsx`，內容寫成 `export { default } from "./agenda";`，再把 `agenda-recap` 列進 `slides`。這兩頁顯示同一個元件，所以修改 `agenda.tsx` 時，兩次出現的地方會一起改變。
 
 - 情境：Slide ID 重複
   - 前提：`deck.json` 的 `slides` 是 `["intro", "agenda", "intro"]`
   - 動作：Build
-  - 結果：Build 失敗，錯誤訊息寫出 `intro`
+  - 結果：Build 失敗，錯誤訊息寫出 `intro`，並寫出讓同一頁出現兩次的做法：另外建一個 TSX 檔，內容寫成 `export { default } from "./intro";`
 
-> 設計理由：Roadmap 的「換頁與操作」會把 slide ID 寫進網址的 hash，讓指向某一頁的連結在頁面順序調整後仍然指向同一頁，所以一個 slide ID 只能對應一頁。曾考慮允許重複，不過現在先禁止重複，之後要放寬時既有的簡報不受影響；反過來先允許重複，之後才禁止時，已經有重複 slide ID 的簡報就會 build 失敗。等「換頁與操作」的 plan 決定網址怎麼記錄目前的頁面、「預覽總覽與排序」的 plan 決定現場隱藏的頁面怎麼存進瀏覽器時，再評估要不要允許重複。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+> 設計理由：播放器把 slide ID 寫進網址的 hash（[navigation.md](navigation.md) 的 NAV-R1），讓指向某一頁的連結在頁面順序調整後仍然指向同一頁，所以一個 slide ID 只能對應一頁。允許重複的話，hash 要另外記錄這是第幾次出現，例如 `#/agenda~2`，而在第二個 `agenda` 之前再插入一次 `agenda` 之後，舊連結的 `~2` 就會指到另一次出現的位置。錯誤訊息寫出重新匯出的做法，因為 AI 製作簡報時通常不會先讀 spec，而是從 build 的錯誤訊息知道怎麼修正。「預覽總覽與排序」的 plan 決定現場隱藏的頁面怎麼存進瀏覽器時，再評估一次要不要允許重複；現在先禁止重複，之後要放寬時，既有的簡報不受影響。完整討論見 [0001](../plans/archive/0001-project-foundation.md) 與 [0002](../plans/archive/0002-navigation.md)。
 
 ### FRAME-R5 沒有用到的頁面不會打包進 Slidetray
 

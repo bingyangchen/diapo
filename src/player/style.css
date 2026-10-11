@@ -8,3 +8,9 @@ body {
   overflow: hidden;
   background: black;
 }
+
+/* Hides the cursor over the whole player, including elements that set their own cursor (NAV-R12). */
+[data-cursor-hidden],
+[data-cursor-hidden] * {
+  cursor: none !important;
+}
