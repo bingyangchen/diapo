@@ -9,7 +9,9 @@ const EXAMPLE_URL = makeFileUrl(path.join(E2E_OUTPUT, "example", "index.html"));
 const SECOND_DECK_URL = makeFileUrl(path.join(E2E_OUTPUT, "second-deck", "index.html"));
 
 test.describe("PLAY-R1 shows the first slide when a deck opens", () => {
-  test("opening a deck shows the first slide in deck.json", async ({ page }) => {
+  test("opening a deck without a hash shows the first slide in deck.json", async ({
+    page,
+  }) => {
     await page.goto(EXAMPLE_URL);
 
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible();

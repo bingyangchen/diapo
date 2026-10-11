@@ -62,7 +62,11 @@ test.describe("DIST-R3 the site's home page lists published decks", () => {
   }) => {
     await page.goto(staticServerUrl);
 
-    await expect(page.getByRole("listitem")).toHaveText(["範例", SECOND_DECK_TITLE]);
+    await expect(page.getByRole("listitem")).toHaveText([
+      "操作",
+      "範例",
+      SECOND_DECK_TITLE,
+    ]);
   });
 
   test("clicking a title on the home page opens the deck", async ({
@@ -85,11 +89,15 @@ test.describe("DIST-R4 the site plays under a subpath", () => {
     staticServerUrl,
   }) => {
     await page.goto(staticServerUrl);
-    await expect(page.getByRole("listitem")).toHaveText(["範例", SECOND_DECK_TITLE]);
+    await expect(page.getByRole("listitem")).toHaveText([
+      "操作",
+      "範例",
+      SECOND_DECK_TITLE,
+    ]);
 
     await page.getByRole("link", { name: "範例" }).click();
 
     await expectExampleFirstSlide(page);
-    expect(page.url()).toBe(`${staticServerUrl}example/index.html`);
+    await expect(page).toHaveURL(`${staticServerUrl}example/index.html#/intro`);
   });
 });
