@@ -1,4 +1,4 @@
-實作 [plan NNNN](docs/plans/archive/NNNN-slug.md)。
+實作 [plan NNNN](https://github.com/<owner>/<repo>/blob/<commit>/docs/plans/NNNN-slug.md)。
 
 ## 與 Plan 不同的地方
 
