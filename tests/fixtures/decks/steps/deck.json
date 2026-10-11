@@ -1,0 +1,21 @@
+{
+  "title": "分步",
+  "slides": [
+    "intro",
+    "list",
+    "recap",
+    "agenda",
+    "columns",
+    "reversed",
+    "layout",
+    "hidden-button",
+    "counter",
+    "gaps",
+    "hint-zero",
+    "hint-fraction",
+    "hint-negative",
+    "toggle",
+    "diagram",
+    "finale"
+  ]
+}

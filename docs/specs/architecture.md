@@ -63,6 +63,7 @@
 │       └── assets/             圖片、影片等素材
 ├── src/
 │   ├── build/                  Build script、dev server 與 Vite plugin
+│   ├── framework/              頁面 import 的元件與 hook
 │   ├── player/                 播放器
 │   └── site/                   網站首頁
 ├── tests/
@@ -95,10 +96,15 @@
 
 - `src/build/cli.ts` 是 `make build`、`make build-site` 與 `make dev` 的入口。
 - `src/build/plugins.ts` 的 Vite plugin 提供兩個 virtual module：`virtual:deck` 依 `deck.json` 的順序匯入一份簡報的每一頁，`virtual:site` 提供網站首頁要列出的 deck ID 與標題。
+- `src/framework/` 是頁面 import 的元件與 hook，例如 `Step` 與 `useStep`。
 - `src/player/` 是 Vite 的入口 HTML 與播放器。
 - `src/site/` 是網站首頁的入口 HTML 與 React 元件。
 
 > 設計理由：網站首頁用 React 與 Vite build，因為 roadmap 的「網站首頁」要沿用簡報的主題，首頁之後一定要經過 Vite build；曾考慮由 build script 直接產生靜態 HTML。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+
+頁面從 `#diapo` import `src/framework/` 的元件與 hook，`package.json` 的 `imports` 欄位把 `#diapo` 對應到 `src/framework/index.ts`。
+
+> 設計理由：頁面從 `#diapo` import，因為 `#` 開頭的名稱不會被當成 npm 套件，`decks/` 與 `tests/fixtures/decks/` 裡的頁面也都寫同一個路徑。曾考慮用 Vite 的 `resolve.alias` 加上 tsconfig 的 `paths`，讓頁面從 `diapo` import，但 `diapo` 看起來像 npm 套件，AI 可能會去 npm 找這個套件；也考慮過用相對路徑 import，但 `decks/` 與 `tests/fixtures/decks/` 的深度不同，兩個目錄裡的頁面要寫不同的路徑。完整討論見 [0003](../plans/archive/0003-steps.md)。
 
 `make dev DECK=<deck-id>` 啟動的 Vite dev server 只預覽一份簡報，和 build 這份簡報時用同一份 Vite 設定。`Makefile` 的 `DECKS_DIR` 變數預設是 `decks`；開發播放器時，執行 `make dev DECKS_DIR=tests/fixtures/decks DECK=<deck-id>`，用測試用的簡報預覽。
 
@@ -106,7 +112,28 @@
 
 ### 播放器的狀態
 
-播放器把目前的頁面記錄在網址的 hash（NAV-R1），黑畫面與輸入中的頁碼只存在記憶體，播放器不使用 `localStorage`。
+播放器把目前的頁面與步驟記錄在網址的 hash（NAV-R1、STEP-R11），黑畫面與輸入中的頁碼只存在記憶體，播放器不使用 `localStorage`。
+
+播放器用 React context 把目前的步驟交給 `Step` 與 `useStep`，`Step` 與 `useStep` 也透過同一個 context 向播放器登記步驟。頁面只透過這個 context 讀出目前的步驟，所以任何 render 頁面的元件都能提供這個 context，指定頁面顯示哪一步，不必修改頁面。
+
+播放器要等頁面 render 之後才知道步數（STEP-R5）。從下一頁往回，或 hash 指定了步驟時，播放器先用要求的步驟 render 頁面，也就是往回換頁時的最後一步，或 hash 寫的步驟；接著照下圖，在瀏覽器畫出畫面之前校正步驟。
+
+```mermaid
+sequenceDiagram
+  participant player as 播放器
+  participant page as 頁面的 Step 與 useStep
+  participant browser as 瀏覽器
+  player->>page: 用要求的步驟 render 頁面
+  Note over page: useStep 回傳要求的步驟與<br/>自己參數裡的最大值兩者中較小的那個
+  page->>player: 在 layout effect 裡登記步驟
+  Note over player: 在 layout effect 裡算出步數，把步驟改成<br/>要求的步驟與步數兩者中較小的那個，<br/>再把 hash 改成這一步（往回換頁時，hash 在這裡才改變）
+  player->>page: 用校正後的步驟再 render 一次
+  Note over browser: 畫出畫面
+```
+
+頁面的 effect 也會用校正前的值執行一次。
+
+> 設計理由：校正前的那次 render，`useStep` 最多只回傳自己參數裡的最大值，因為元件只在參數列出的步驟有變化（STEP-R4），在大於最大值的步驟畫出的內容和在最大值那一步相同，而且元件讀到的步驟不會超過自己寫過的步驟。曾考慮直接把要求的步驟交給頁面，但往回換頁時，播放器在 render 之前不知道最後一步是第幾步，只能用 `Infinity` 表示，hash 也可能寫了極大的數字；頁面寫了 `Array.from({ length: step })` 這類程式碼時，這兩種值都會讓它丟出 `RangeError`，而播放器沒有 error boundary，所以整個畫面會變成空白。完整討論見 [0003](../plans/archive/0003-steps.md)。
 
 ## 資料流
 

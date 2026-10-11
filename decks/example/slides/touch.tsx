@@ -11,7 +11,7 @@ export default function Touch() {
       <div className="flex w-1/2 flex-col gap-12">
         <h1 className="text-8xl font-bold text-slate-800">觸控</h1>
         <ul className="list-disc space-y-6 pl-12 text-4xl leading-snug">
-          <li>手指往左滑換到下一頁，往右滑換到上一頁。</li>
+          <li>手指往左滑是下一步，往右滑是上一步。</li>
           <li>從滑桿開始拖曳時，只會改變滑桿的值，不會換頁。</li>
           <li>
             拖曳區設定了 <code>touch-action: none</code>，從這裡開始拖曳時只會移動圓點。

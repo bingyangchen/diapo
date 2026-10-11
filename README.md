@@ -82,24 +82,47 @@ Each slide ID can appear in `slides` only once. To show a slide twice, add a fil
 export { default } from "./agenda";
 ```
 
+To reveal content step by step, wrap it in `Step` with the step it appears at. A component that changes in other ways reads the current step with `useStep`, listing every step at which it changes:
+
+```tsx
+import { Step, useStep } from "#diapo";
+
+export default function Agenda() {
+  const step = useStep(3);
+  return (
+    <div className="flex flex-col gap-8">
+      <Step at={1}>
+        <p>Appears at step 1</p>
+      </Step>
+      <Step at={2}>
+        <p>Appears at step 2</p>
+      </Step>
+      <p>{step < 3 ? "Before step 3" : "From step 3 on"}</p>
+    </div>
+  );
+}
+```
+
+Space items with `gap`, not `space-y-*`, which skips items inside a `Step`. The full rules are in `docs/specs/steps.md`.
+
 ## Playing a Deck
 
 - **Online:** open the deck from <https://bingyangchen.github.io/diapo/>.
 - **On your laptop without a network:** run `make build`, then `make serve`.
 - **On a venue computer from a USB drive:** run `make build`, copy `dist/<deck-id>/` to the drive, and open its `index.html` in a browser.
 
-While a deck plays, the URL hash names the current slide (`#/intro`), so a reload or a shared link opens the same slide. A presenter remote works like a keyboard:
+While a deck plays, the URL hash names the current slide and step (`#/intro`, or `#/intro/2` from step 1 on), so a reload or a shared link opens the same screen. Next plays the current slide's remaining steps before moving on, and Previous from a slide's start lands on the previous slide's last step. A presenter remote works like a keyboard:
 
 | Action | Keys |
 | --- | --- |
-| Next slide | →, ↓, Page Down, Space, Enter, or swipe left |
-| Previous slide | ←, ↑, Page Up, Shift+Space, Backspace, or swipe right |
+| Next step | →, ↓, Page Down, Space, Enter, or swipe left |
+| Previous step | ←, ↑, Page Up, Shift+Space, Backspace, or swipe right |
 | First or last slide | Home or End |
 | Go to slide _n_ | Type _n_, then Enter |
 | Black screen | B or . |
 | Fullscreen | F, F5, or the button in the bottom-right corner |
 
-After Home, End, or a typed slide number, the browser's back button returns to the slide you jumped from.
+After Home, End, or a typed slide number, the browser's back button returns to the slide and step you jumped from.
 
 ## Deployment
 

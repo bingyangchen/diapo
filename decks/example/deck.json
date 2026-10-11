@@ -3,6 +3,8 @@
   "slides": [
     "cover",
     "shortcuts",
+    "steps",
+    "step-hook",
     "jumping",
     "form",
     "arrow-pad",

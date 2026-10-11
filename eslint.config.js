@@ -48,7 +48,13 @@ export default defineConfig(
   },
 
   {
-    files: ["src/player/**", "src/site/**", "decks/**", "tests/fixtures/decks/**"],
+    files: [
+      "src/framework/**",
+      "src/player/**",
+      "src/site/**",
+      "decks/**",
+      "tests/fixtures/decks/**",
+    ],
     extends: [reactHooks.configs.flat["recommended-latest"]],
     languageOptions: { globals: globals.browser },
   },

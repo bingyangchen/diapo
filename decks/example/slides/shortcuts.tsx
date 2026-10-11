@@ -1,6 +1,6 @@
 const SHORTCUTS: [string, string][] = [
-  ["下一頁", "→、↓、PageDown、Space、Enter，或往左滑"],
-  ["上一頁", "←、↑、PageUp、Shift+Space、Backspace，或往右滑"],
+  ["下一步", "→、↓、PageDown、Space、Enter，或往左滑"],
+  ["上一步", "←、↑、PageUp、Shift+Space、Backspace，或往右滑"],
   ["第一頁、最後一頁", "Home、End"],
   ["跳到第 n 頁", "輸入 n，再按 Enter"],
   ["黑畫面", "B 或 ."],
