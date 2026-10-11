@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const IDLE_TIMEOUT_MS = 3000;
+const IDLE_TIMEOUT_MS = 2000;
 
 /**
- * Tracks whether the mouse moved, or `reportActivity` was called, within the last 3 seconds
+ * Tracks whether the mouse moved, or `reportActivity` was called, within the last 2 seconds
  * (NAV-R11, NAV-R12).
  */
 export function useActivity(): { isUserActive: boolean; reportActivity: () => void } {
@@ -18,14 +18,15 @@ export function useActivity(): { isUserActive: boolean; reportActivity: () => vo
 
   useEffect(() => {
     idleTimerRef.current = setTimeout(() => setIsUserActive(false), IDLE_TIMEOUT_MS);
-    let lastScreenX: number | null = null;
-    let lastScreenY: number | null = null;
+    let lastClientX: number | null = null;
+    let lastClientY: number | null = null;
     function handleMouseMove(event: MouseEvent) {
       // Browsers may send mousemove without movement, for example when the cursor style
-      // changes, which would show the cursor again right after hiding it.
-      if (event.screenX === lastScreenX && event.screenY === lastScreenY) return;
-      lastScreenX = event.screenX;
-      lastScreenY = event.screenY;
+      // changes, which would show the cursor again right after hiding it. Compares client
+      // coordinates, since WebKit on Linux reports every screen coordinate as 0.
+      if (event.clientX === lastClientX && event.clientY === lastClientY) return;
+      lastClientX = event.clientX;
+      lastClientY = event.clientY;
       reportActivity();
     }
     window.addEventListener("mousemove", handleMouseMove);

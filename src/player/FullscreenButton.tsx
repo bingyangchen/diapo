@@ -10,7 +10,7 @@ export function FullscreenButton({ isUserActive }: { isUserActive: boolean }) {
     <button
       type="button"
       aria-label={isFullscreen ? "離開全螢幕" : "進入全螢幕"}
-      className={`fixed right-4 bottom-4 flex size-11 items-center justify-center rounded-lg bg-black/60 text-white transition-opacity duration-200 ${isVisible ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      className={`flex size-11 items-center justify-center rounded-full bg-black/40 text-white transition-opacity duration-200 ${isVisible ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
       // Keeps a click from focusing the button, so Space and Enter still change slides
       // afterwards instead of pressing the button again (NAV-R7).
       onMouseDown={(event) => event.preventDefault()}

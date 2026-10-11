@@ -6,9 +6,7 @@ import { expect, test } from "@playwright/test";
 import { E2E_OUTPUT, makeFileUrl } from "./support.ts";
 
 // The `example` fixture deck plays intro, agenda, recap; `controls` has 12 slides, starting
-// with widgets, counter, and counter-again. Tests that fast-forward timers call
-// `page.clock.install()` before opening the deck, so the timers the player starts on load
-// also run on the fake clock.
+// with widgets, counter, and counter-again.
 
 test.describe("NAV-R1 the URL hash records the current slide", () => {
   test("opening a URL with a slide hash shows that slide", async ({ page }) => {
@@ -183,7 +181,9 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expectSlide(page, "Page 12");
   });
 
-  test("the canvas shows the page number while typing", async ({ page }) => {
+  test("the page number shows above the fullscreen button while typing", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
 
     await page.keyboard.press("1");
@@ -191,13 +191,18 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
 
     const pageNumber = page.getByTestId("page-number");
     await expect(pageNumber).toHaveText("12");
-    await expectInBottomRightCorner(pageNumber, page.getByTestId("canvas"));
+    const pageNumberBox = await getBox(pageNumber);
+    const buttonBox = await getBox(page.getByRole("button", { name: /全螢幕$/ }));
+    expect(pageNumberBox.x + pageNumberBox.width).toBeCloseTo(
+      buttonBox.x + buttonBox.width,
+    );
+    expect(pageNumberBox.y + pageNumberBox.height).toBeLessThanOrEqual(buttonBox.y);
   });
 
   test("the page number disappears after 3 seconds without typing", async ({
     page,
   }) => {
-    await page.clock.install();
+    await installPausedClock(page);
     await openDeck(page, "example");
     await page.keyboard.press("3");
     await expect(page.getByTestId("page-number")).toHaveText("3");
@@ -210,7 +215,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
   test("Enter after the page number times out moves to the next slide", async ({
     page,
   }) => {
-    await page.clock.install();
+    await installPausedClock(page);
     await openDeck(page, "example");
     await page.keyboard.press("3");
     await expect(page.getByTestId("page-number")).toHaveText("3");
@@ -692,20 +697,20 @@ test.describe("NAV-R10 fullscreen", () => {
 });
 
 test.describe("NAV-R11 the fullscreen button", () => {
-  test("opening the deck shows the button for 3 seconds", async ({ page }) => {
-    await page.clock.install();
+  test("opening the deck shows the button for 2 seconds", async ({ page }) => {
+    await installPausedClock(page);
     await openDeck(page, "example");
     await expectFullscreenButtonShown(page, true);
 
-    await page.clock.runFor(3000);
+    await page.clock.runFor(2000);
 
     await expectFullscreenButtonShown(page, false);
   });
 
   test("moving the mouse shows the button", async ({ page }) => {
-    await page.clock.install();
+    await installPausedClock(page);
     await openDeck(page, "example");
-    await page.clock.runFor(3000);
+    await page.clock.runFor(2000);
     await expectFullscreenButtonShown(page, false);
 
     await page.mouse.move(200, 200);
@@ -713,13 +718,13 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreenButtonShown(page, true);
   });
 
-  test("the button hides after 3 seconds without input", async ({ page }) => {
-    await page.clock.install();
+  test("the button hides after 2 seconds without input", async ({ page }) => {
+    await installPausedClock(page);
     await openDeck(page, "example");
     await page.mouse.move(200, 200);
     await expectFullscreenButtonShown(page, true);
 
-    await page.clock.runFor(3000);
+    await page.clock.runFor(2000);
 
     await expectFullscreenButtonShown(page, false);
   });
@@ -751,15 +756,15 @@ test.describe("NAV-R11 the fullscreen button", () => {
     page,
     browserName,
   }) => {
-    await page.clock.install();
+    await installPausedClock(page);
     await openDeck(page, "example");
-    await page.clock.runFor(3000);
+    await page.clock.runFor(2000);
     await expectFullscreenButtonShown(page, false);
 
     // Like Safari, WebKit's Tab skips buttons unless Option (Alt) is held.
     await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
     await expectFullscreenButtonShown(page, true);
-    await page.clock.runFor(3000);
+    await page.clock.runFor(2000);
     await expectFullscreenButtonShown(page, true);
     await page.keyboard.press("Space");
 
@@ -771,9 +776,9 @@ test.describe("NAV-R11 the fullscreen button", () => {
     test.use({ hasTouch: true });
 
     test("tapping the screen shows the button", async ({ page }) => {
-      await page.clock.install();
+      await installPausedClock(page);
       await openDeck(page, "example");
-      await page.clock.runFor(3000);
+      await page.clock.runFor(2000);
       await expectFullscreenButtonShown(page, false);
 
       const center = await getCenter(page.getByTestId("canvas"));
@@ -786,24 +791,24 @@ test.describe("NAV-R11 the fullscreen button", () => {
 });
 
 test.describe("NAV-R12 the cursor hides when the mouse is idle", () => {
-  test("the cursor hides after the mouse stops for 3 seconds", async ({ page }) => {
-    await page.clock.install();
+  test("the cursor hides after the mouse stops for 2 seconds", async ({ page }) => {
+    await installPausedClock(page);
     await openDeck(page, "example");
     const player = page.getByTestId("player");
     await page.mouse.move(200, 200);
     await expect(player).toHaveCSS("cursor", "auto");
 
-    await page.clock.runFor(3000);
+    await page.clock.runFor(2000);
 
     await expect(player).toHaveCSS("cursor", "none");
   });
 
   test("moving the mouse shows the hidden cursor", async ({ page }) => {
-    await page.clock.install();
+    await installPausedClock(page);
     await openDeck(page, "example");
     const player = page.getByTestId("player");
     await page.mouse.move(200, 200);
-    await page.clock.runFor(3000);
+    await page.clock.runFor(2000);
     await expect(player).toHaveCSS("cursor", "none");
 
     await page.mouse.move(300, 300);
@@ -894,6 +899,16 @@ async function holdKey(page: Page, key: string, repeatCount: number): Promise<vo
   await page.keyboard.up(key);
 }
 
+/**
+ * Installs a paused fake clock before the deck opens, so the player's timers, including
+ * those it starts on load, fire only when the test calls `page.clock.runFor()`. A running
+ * clock would also fire them while an assertion waits.
+ */
+async function installPausedClock(page: Page): Promise<void> {
+  await page.clock.install({ time: 0 });
+  await page.clock.pauseAt(1000);
+}
+
 async function expectSlide(page: Page, heading: string): Promise<void> {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
 }
@@ -942,16 +957,12 @@ async function expectLastKeydownDefaultPrevented(
   );
 }
 
-async function expectInBottomRightCorner(
-  element: Locator,
-  canvas: Locator,
-): Promise<void> {
-  const elementBox = await element.boundingBox();
-  const canvasBox = await canvas.boundingBox();
-  if (elementBox === null || canvasBox === null)
-    throw new Error("Element is not visible");
-  expect(elementBox.x).toBeGreaterThan(canvasBox.x + canvasBox.width / 2);
-  expect(elementBox.y).toBeGreaterThan(canvasBox.y + canvasBox.height / 2);
+async function getBox(
+  locator: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("Element is not visible");
+  return box;
 }
 
 async function clickCounterThreeTimes(page: Page): Promise<void> {
@@ -962,8 +973,7 @@ async function clickCounterThreeTimes(page: Page): Promise<void> {
 }
 
 async function getCenter(locator: Locator): Promise<{ x: number; y: number }> {
-  const box = await locator.boundingBox();
-  if (box === null) throw new Error("Element is not visible");
+  const box = await getBox(locator);
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 

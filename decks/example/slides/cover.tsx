@@ -7,6 +7,7 @@ export default function Cover() {
       <div>
         <h1 className="text-9xl font-bold text-slate-800">diapo</h1>
         <p className="mt-8 text-5xl text-slate-600">用程式碼寫簡報，在任何地方播放</p>
+        <p className="mt-16 text-4xl text-slate-400">按 → 或往左滑開始</p>
       </div>
     </div>
   );

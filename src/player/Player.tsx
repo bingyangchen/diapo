@@ -170,26 +170,27 @@ export function Player({ deck }: { deck: Deck }) {
       data-cursor-hidden={isUserActive ? undefined : ""}
     >
       <Canvas>
-        {/* Isolates the slide's z-indexes, so the page number and the black screen stay on top (NAV-R9). */}
+        {/* Isolates the slide's z-indexes, so the black screen stays on top (NAV-R9). */}
         <div className="absolute inset-0 isolate">
           {/* Keyed by slide ID, so a slide that re-exports the previous one still starts over (NAV-R13). */}
           <Component key={slide.id} />
         </div>
-        {state.pageNumberDigits !== "" && (
-          // Sits 128px up, so the fullscreen button in the window's corner does not cover
-          // it in windows at least 900px wide.
-          <div
-            data-testid="page-number"
-            className="absolute right-8 bottom-32 rounded-lg bg-black/60 px-4 py-1 font-sans text-[32px] text-white tabular-nums"
-          >
-            {state.pageNumberDigits}
-          </div>
-        )}
         {state.isBlackScreen && (
           <div data-testid="black-screen" className="absolute inset-0 bg-black" />
         )}
       </Canvas>
-      {isFullscreenSupported() && <FullscreenButton isUserActive={isUserActive} />}
+      {/* Lets clicks through to the slide wherever the page number and a hidden button sit. */}
+      <div className="pointer-events-none fixed right-4 bottom-4 flex flex-col items-end gap-2">
+        {state.pageNumberDigits !== "" && (
+          <div
+            data-testid="page-number"
+            className="flex h-11 items-center rounded-lg bg-black/40 px-4 font-sans text-2xl text-white tabular-nums"
+          >
+            {state.pageNumberDigits}
+          </div>
+        )}
+        {isFullscreenSupported() && <FullscreenButton isUserActive={isUserActive} />}
+      </div>
     </div>
   );
 }
