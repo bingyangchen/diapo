@@ -8,7 +8,7 @@
 flowchart TD
   P0001("0001 專案地基<br/>已完成"):::done
   P0002("0002 換頁與操作<br/>已完成"):::done
-  steps("頁內分步<br/>未規劃"):::unplanned
+  P0003("0003 頁內分步<br/>已核准"):::approved
   transitions("換頁與進場動畫<br/>未規劃"):::unplanned
   magic_move("Magic Move<br/>未規劃"):::unplanned
   overview("預覽總覽<br/>未規劃"):::unplanned
@@ -29,12 +29,12 @@ flowchart TD
   token_benchmark("Token 用量比較<br/>未規劃"):::unplanned
   skill_modify("修改簡報 skill<br/>未規劃"):::unplanned
   skill_convert("轉換既有簡報 skill<br/>未規劃"):::unplanned
-  P0001 --> P0002 --> steps --> transitions --> magic_move
-  steps --> overview --> reorder
+  P0001 --> P0002 --> P0003 --> transitions --> magic_move
+  P0003 --> overview --> reorder
   P0002 --> annotation
-  steps --> presenter --> skill_generate
-  steps --> pdf_export
-  steps --> layout_check
+  P0003 --> presenter --> skill_generate
+  P0003 --> pdf_export
+  P0003 --> layout_check
   P0001 --> theme --> layouts --> layout_check --> skill_generate
   skill_generate --> token_benchmark --> skill_modify
   token_benchmark --> skill_convert
@@ -44,7 +44,7 @@ flowchart TD
   theme --> math
   theme --> mermaid_diagram
   theme --> charts
-  steps --> charts
+  P0003 --> charts
   classDef done fill:#4f7262,stroke:#4f7262,color:#f7f5f0
   classDef approved fill:none,stroke:#6b8f7e,stroke-width:1.5px
   classDef unplanned fill:none,stroke:#9a978f,stroke-dasharray:3 3
@@ -57,7 +57,7 @@ flowchart TD
 讓講者在任何場地都能用鍵盤、翻頁器或觸控播放簡報，並在現場臨時調整內容。
 
 1. [換頁與操作](archive/0002-navigation.md)：用鍵盤、翻頁器與觸控滑動換頁，支援跳頁、黑畫面與全螢幕。播放器把 slide ID 寫在網址的 hash 裡（例如 `#/intro`），所以調整頁面順序後，舊連結仍然指向同一頁。
-2. 頁內分步：由播放器統一處理「下一步」，這頁的步驟走完才換頁。網址的 hash 加上第二段記錄目前的步驟（例如 `#/intro/2`）。
+2. [頁內分步](0003-steps.md)：由播放器統一處理「下一步」，這頁的步驟走完才換頁。網址的 hash 加上第二段記錄目前的步驟（例如 `#/intro/2`）。
 3. 換頁與進場動畫：播放器提供一組預設效果，每一頁用效果的名稱挑選要用哪一種，沒有挑選的頁面套用 `deck.json` 指定的效果。
 4. Magic Move：換頁時，前後兩頁都有的元素從前一頁的位置移動到後一頁的位置，一般元素與程式碼都支援。程式碼的動畫在 build 時先算好，播放時不載入 Shiki。
 5. 預覽總覽：以縮圖列出每一頁，縮圖顯示每頁最後一步的畫面。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。
@@ -97,7 +97,7 @@ flowchart TD
 
 讓 AI agent 製作與修改簡報時消耗的 LLM token，明顯少於使用 AI agent 內建的簡報生成功能，也明顯少於透過簡報軟體的 MCP server 製作。Skill 用英文撰寫，放在 `.agents/skills/`，再在 `.claude/skills/` 建 symlink 指向這些 skill。建立或調整主題、新增版型元件屬於框架開發，照 sdd 流程修改 spec 與程式碼，不做成 skill。
 
-1. 版面檢查指令：用 Playwright 逐頁檢查超出畫布、文字溢出、元素重疊、字級過小、寫死的顏色，以及頁面實際的步驟數與頁面宣告的步驟數不符，並用文字回報。講者指定某一頁時，AI 才截圖檢查那一頁，因為一張截圖約佔 1,500 個 token，每頁都截圖會讓 token 用量多出好幾倍。
+1. 版面檢查指令：用 Playwright 逐頁檢查超出畫布、文字溢出、元素重疊、字級過小與寫死的顏色，並收集播放器在 console 印出的警告與錯誤，例如步驟跳號，再用文字回報。講者指定某一頁時，AI 才截圖檢查那一頁，因為一張截圖約佔 1,500 個 token，每頁都截圖會讓 token 用量多出好幾倍。
 2. 生成簡報 skill：從主題、大綱或逐字稿生成整份簡報與講者備註。Skill 要說明同一頁要出現兩次時，另外建一個重新匯出那一頁的 TSX 檔。
 3. Token 用量比較：用同一份大綱，分別以 diapo 的 skill、AI agent 內建的簡報生成功能、簡報軟體的 MCP server 製作簡報，比較三種做法的 input 與 output token，以及修正到版面正確為止的來回次數。比較流程手動執行，不放進每個 PR 的 CI；每種做法跑多次取中位數。外部的做法量一次，等它們改版時再重量；diapo 則在改到 skill 或框架元件時重跑。
 4. 修改簡報 skill：修改單頁、插入頁面、調整局部內容。
