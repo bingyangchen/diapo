@@ -11,7 +11,8 @@ flowchart TD
   steps("頁內分步<br/>未規劃"):::unplanned
   transitions("換頁與進場動畫<br/>未規劃"):::unplanned
   magic_move("Magic Move<br/>未規劃"):::unplanned
-  overview("預覽總覽與排序<br/>未規劃"):::unplanned
+  overview("預覽總覽<br/>未規劃"):::unplanned
+  reorder("排序與隱藏<br/>未規劃"):::unplanned
   annotation("畫筆標註<br/>未規劃"):::unplanned
   presenter("講者模式<br/>未規劃"):::unplanned
   theme("主題、亮暗配色與字型<br/>未規劃"):::unplanned
@@ -29,14 +30,15 @@ flowchart TD
   skill_modify("修改簡報 skill<br/>未規劃"):::unplanned
   skill_convert("轉換既有簡報 skill<br/>未規劃"):::unplanned
   P0001 --> P0002 --> steps --> transitions --> magic_move
-  P0002 --> overview
+  steps --> overview --> reorder
   P0002 --> annotation
-  steps --> presenter
+  steps --> presenter --> skill_generate
   steps --> pdf_export
+  steps --> layout_check
   P0001 --> theme --> layouts --> layout_check --> skill_generate
   skill_generate --> token_benchmark --> skill_modify
   token_benchmark --> skill_convert
-  P0001 --> media
+  P0001 --> media --> skill_convert
   theme --> site_home
   theme --> code_highlight --> magic_move
   theme --> math
@@ -58,8 +60,9 @@ flowchart TD
 2. 頁內分步：由播放器統一處理「下一步」，這頁的步驟走完才換頁。網址的 hash 加上第二段記錄目前的步驟（例如 `#/intro/2`）。
 3. 換頁與進場動畫：播放器提供一組預設效果，每一頁用效果的名稱挑選要用哪一種，沒有挑選的頁面套用 `deck.json` 指定的效果。
 4. Magic Move：換頁時，前後兩頁都有的元素從前一頁的位置移動到後一頁的位置，一般元素與程式碼都支援。程式碼的動畫在 build 時先算好，播放時不載入 Shiki。
-5. 預覽總覽與排序：縮圖顯示每頁最後一步的畫面。在本機開發時，拖曳排序的結果寫回 `deck.json`；在其他環境，新的順序與隱藏的頁面存在這台電腦的瀏覽器裡。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。
-6. 畫筆標註：在頁面上疊一層 canvas，換頁後清除。
+5. 預覽總覽：以縮圖列出每一頁，縮圖顯示每頁最後一步的畫面。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。
+6. 排序與隱藏：在總覽拖曳縮圖調整順序。在本機開發時，拖曳排序的結果寫回 `deck.json`；在其他環境，新的順序與隱藏的頁面存在這台電腦的瀏覽器裡，可以還原。
+7. 畫筆標註：在頁面上疊一層 canvas，換頁後清除。
 
 ### 講者模式
 
