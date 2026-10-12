@@ -199,7 +199,7 @@ GitHub Actions 的 workflow 放在 `.github/workflows/`：
 | `ci.yml` | PR 開啟或更新時 | `check` job 依序執行 `make install`、`make check`、`make build-site`、`make e2e`，PR 只改 `.md` 檔時跳過；`lint-md` job 在每個 PR 都依序執行 `pnpm install`、`make lint-md` |
 | `deploy.yml` | Merge 到 `main` 時 | 依序執行 `pnpm install`、`make build-site`，再透過 GitHub Actions 的 Pages 部署流程把 `dist/` 部署到 GitHub Pages |
 
-> 設計理由：`check` job 執行的指令裡，只有 `make check` 裡的 `make lint-md` 會檢查 Markdown，而 `lint-md` job 在每個 PR 都會執行 `make lint-md`，所以只改 `.md` 檔的 PR 跳過 `check` job。改到其他檔案的 PR 每次更新都跑 E2E test，因為 E2E test 在本機跑完不到 10 秒，CI 上比較花時間的是下載瀏覽器，而且 public repo 用 GitHub Actions 的標準 runner 不用付費。曾考慮用 PR 的 label 觸發 E2E test，並把 E2E test 設成 merge 的條件，但 merge 條件看的是 PR 最新的 commit，所以開 PR 的人每次 push 之後都要重新加一次 label；GitHub 的 merge queue 能在 merge 前才跑 E2E test，但只開放給 organization 擁有的 repo。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+> 設計理由：Markdown 由 `lint-md` job 在每個 PR 檢查，`check` job 其他的步驟都不檢查 Markdown，所以只改 `.md` 檔的 PR 跳過 `check` job。改到其他檔案的 PR 每次更新都跑 E2E test，因為 E2E test 在本機跑完不到 10 秒，CI 上比較花時間的是下載瀏覽器，而且 public repo 用 GitHub Actions 的標準 runner 不用付費。曾考慮用 PR 的 label 觸發 E2E test，並把 E2E test 設成 merge 的條件，但 merge 條件看的是 PR 最新的 commit，所以開 PR 的人每次 push 之後都要重新加一次 label；GitHub 的 merge queue 能在 merge 前才跑 E2E test，但只開放給 organization 擁有的 repo。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
 `make e2e` 會自己 build `tests/fixtures/decks/`，所以 `ci.yml` 裡的 `make build-site` 只負責確認 `decks/` 的部署用 build 能成功。`deploy.yml` 與 `ci.yml` 的 `lint-md` job 用 `pnpm install` 安裝套件，不執行 `make install`，所以不會下載 Playwright 的瀏覽器。
 
