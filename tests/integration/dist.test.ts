@@ -34,33 +34,33 @@ afterAll(async () => {
 });
 
 describe("DIST-R5 keeps unpublished decks off the site", () => {
-  test("the deployment build leaves out a deck with publish: false", async () => {
+  test("DIST-R5.1 the deployment build leaves out a deck with publish: false", async () => {
     expect(existsSync(path.join(siteOutput, "private-notes"))).toBe(false);
     expect(await readAllFiles(siteOutput)).not.toContain("private-notes");
   });
 
-  test("the local build keeps a deck with publish: false", async () => {
+  test("DIST-R5.2 the local build keeps a deck with publish: false", async () => {
     expect(existsSync(path.join(localOutput, "private-notes", "index.html"))).toBe(
       true,
     );
     expect(await readHomePageFiles(localOutput)).toContain("private-notes");
   });
 
-  test("the deployment build includes a deck without a publish field", async () => {
+  test("DIST-R5.3 the deployment build includes a deck without a publish field", async () => {
     expect(existsSync(path.join(siteOutput, "second-deck", "index.html"))).toBe(true);
     expect(await readHomePageFiles(siteOutput)).toContain("second-deck");
   });
 });
 
 describe("FRAME-R5 unused slide files stay out of the slidetray", () => {
-  test("a slide file not listed in slides stays out of the slidetray", async () => {
+  test("FRAME-R5.1 a slide file not listed in slides stays out of the slidetray", async () => {
     const slidetray = await readAllFiles(path.join(localOutput, "example"));
 
     expect(slidetray).toContain("Agenda");
     expect(slidetray).not.toContain("Unlisted draft");
   });
 
-  test("a slide file that a listed slide imports stays in the slidetray", async () => {
+  test("FRAME-R5.2 a slide file that a listed slide imports stays in the slidetray", async () => {
     const slidetray = await readAllFiles(path.join(localOutput, "example"));
 
     expect(slidetray).toContain("Summary");

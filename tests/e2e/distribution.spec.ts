@@ -13,7 +13,7 @@ import {
 } from "./support.ts";
 
 test.describe("DIST-R1 each deck gets its own slidetray", () => {
-  test("a slidetray plays offline without requests outside it", async ({
+  test("DIST-R1.1 a slidetray plays offline without requests outside it", async ({
     page,
     staticServerUrl,
   }) => {
@@ -35,13 +35,17 @@ test.describe("DIST-R1 each deck gets its own slidetray", () => {
 });
 
 test.describe("DIST-R2 opening the file directly plays the deck", () => {
-  test("opening index.html from file:// shows the first slide", async ({ page }) => {
+  test("DIST-R2.1, DIST-R2.2, DIST-R2.3 opening index.html from file:// shows the first slide", async ({
+    page,
+  }) => {
     await page.goto(makeFileUrl(path.join(E2E_OUTPUT, "example", "index.html")));
 
     await expectExampleFirstSlide(page);
   });
 
-  test("a slidetray copied elsewhere still shows the first slide", async ({ page }) => {
+  test("DIST-R2.5 a slidetray copied elsewhere still shows the first slide", async ({
+    page,
+  }) => {
     const copyRoot = await mkdtemp(path.join(tmpdir(), "diapo-slidetray-"));
     const copiedSlidetray = path.join(copyRoot, "usb-drive", "talk");
     await cp(path.join(E2E_OUTPUT, "example"), copiedSlidetray, { recursive: true });
@@ -56,7 +60,7 @@ test.describe("DIST-R2 opening the file directly plays the deck", () => {
 });
 
 test.describe("DIST-R3 the site's home page lists published decks", () => {
-  test("the home page lists the title of every published deck", async ({
+  test("DIST-R3.1 the home page lists the title of every published deck", async ({
     page,
     staticServerUrl,
   }) => {
@@ -70,7 +74,7 @@ test.describe("DIST-R3 the site's home page lists published decks", () => {
     ]);
   });
 
-  test("clicking a title on the home page opens the deck", async ({
+  test("DIST-R3.2 clicking a title on the home page opens the deck", async ({
     page,
     staticServerUrl,
   }) => {
@@ -85,7 +89,7 @@ test.describe("DIST-R3 the site's home page lists published decks", () => {
 test.describe("DIST-R4 the site plays under a subpath", () => {
   test.use({ staticServerBase: "/diapo/" });
 
-  test("the home page and decks open under /diapo/", async ({
+  test("DIST-R4.1 the home page and decks open under /diapo/", async ({
     page,
     staticServerUrl,
   }) => {

@@ -3,7 +3,7 @@ DECK ?=
 
 BUILD = node src/build/cli.ts
 
-.PHONY: install dev build build-site serve lint lint-md format typecheck test e2e check
+.PHONY: install dev build build-site serve lint lint-md check-scenarios format typecheck test e2e check
 
 install:
 	pnpm install
@@ -30,6 +30,9 @@ lint: lint-md
 lint-md:
 	pnpm exec markdownlint-cli2
 
+check-scenarios:
+	node scripts/check-scenarios.ts
+
 format:
 	pnpm exec eslint --fix .
 	pnpm exec prettier --write .
@@ -47,4 +50,4 @@ test:
 e2e:
 	pnpm exec playwright test
 
-check: lint typecheck test
+check: lint check-scenarios typecheck test

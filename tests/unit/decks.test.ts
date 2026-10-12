@@ -15,7 +15,7 @@ import { BuildError } from "../../src/build/errors.ts";
 const CONFIG_PATH = "decks/talk/deck.json";
 
 describe("FRAME-R1 deck.json lists the slides in playback order", () => {
-  test("a slide without a file fails the build and names the slide", () => {
+  test("FRAME-R1.1 a slide without a file fails the build and names the slide", () => {
     const config = parseDeckConfig(
       JSON.stringify({ title: "Talk", slides: ["intro", "agenda"] }),
       CONFIG_PATH,
@@ -29,7 +29,7 @@ describe("FRAME-R1 deck.json lists the slides in playback order", () => {
     );
   });
 
-  test("a deck.json without slides fails the build and names slides", () => {
+  test("FRAME-R1.2 a deck.json without slides fails the build and names slides", () => {
     const text = JSON.stringify({ title: "Talk", slides: [] });
 
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
@@ -40,7 +40,7 @@ describe("FRAME-R1 deck.json lists the slides in playback order", () => {
 });
 
 describe("FRAME-R2 deck.json accepts only the defined fields", () => {
-  test("a misspelled field fails the build and names the field", () => {
+  test("FRAME-R2.1 a misspelled field fails the build and names the field", () => {
     const text = JSON.stringify({ title: "Talk", pubish: false, slides: ["intro"] });
 
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
@@ -49,7 +49,7 @@ describe("FRAME-R2 deck.json accepts only the defined fields", () => {
     );
   });
 
-  test("invalid JSON fails the build and says so", () => {
+  test("FRAME-R2.2 invalid JSON fails the build and says so", () => {
     const text = '{ "title": "Talk", "slides": ["intro"], }';
 
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
@@ -58,7 +58,7 @@ describe("FRAME-R2 deck.json accepts only the defined fields", () => {
     );
   });
 
-  test("a missing required field fails the build and names the field", () => {
+  test("FRAME-R2.3 a missing required field fails the build and names the field", () => {
     const text = JSON.stringify({ slides: ["intro"] });
 
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
@@ -67,7 +67,7 @@ describe("FRAME-R2 deck.json accepts only the defined fields", () => {
     );
   });
 
-  test("publish written as a string fails the build and names the field", () => {
+  test("FRAME-R2.4 publish written as a string fails the build and names the field", () => {
     const text = JSON.stringify({ title: "Talk", publish: "false", slides: ["intro"] });
 
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
@@ -76,7 +76,7 @@ describe("FRAME-R2 deck.json accepts only the defined fields", () => {
     );
   });
 
-  test("an empty title fails the build and names the field", () => {
+  test("FRAME-R2.5 an empty title fails the build and names the field", () => {
     const text = JSON.stringify({ title: "", slides: ["intro"] });
 
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
@@ -85,7 +85,7 @@ describe("FRAME-R2 deck.json accepts only the defined fields", () => {
     );
   });
 
-  test("a title of only spaces fails the build and names the field", () => {
+  test("FRAME-R2.6 a title of only spaces fails the build and names the field", () => {
     const text = JSON.stringify({ title: "   ", slides: ["intro"] });
 
     expect(() => parseDeckConfig(text, CONFIG_PATH)).toThrow(BuildError);
@@ -96,7 +96,7 @@ describe("FRAME-R2 deck.json accepts only the defined fields", () => {
 });
 
 describe("FRAME-R3 deck IDs and slide IDs are lowercase kebab-case", () => {
-  test("a deck ID that is not kebab-case fails the build and names the deck", async () => {
+  test("FRAME-R3.1 a deck ID that is not kebab-case fails the build and names the deck", async () => {
     const decksDirectory = await mkdtemp(path.join(tmpdir(), "diapo-decks-"));
     // Apart from its name, the deck is valid, so only the deck ID check can fail it.
     const deckDirectory = path.join(decksDirectory, "_assets");
@@ -110,7 +110,7 @@ describe("FRAME-R3 deck IDs and slide IDs are lowercase kebab-case", () => {
     }
   });
 
-  test("a slide ID that is not kebab-case fails the build and names the slide", () => {
+  test("FRAME-R3.2 a slide ID that is not kebab-case fails the build and names the slide", () => {
     // parseDeckConfig never looks at slides/, so a missing Intro.tsx cannot be the cause.
     const text = JSON.stringify({ title: "Talk", slides: ["Intro"] });
 
@@ -122,7 +122,7 @@ describe("FRAME-R3 deck IDs and slide IDs are lowercase kebab-case", () => {
 });
 
 describe("FRAME-R4 a slide ID appears in slides only once", () => {
-  test("a repeated slide ID fails the build and explains how to show a slide twice", () => {
+  test("FRAME-R4.1 a repeated slide ID fails the build and explains how to show a slide twice", () => {
     const text = JSON.stringify({
       title: "Talk",
       slides: ["intro", "agenda", "intro"],

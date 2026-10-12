@@ -15,7 +15,7 @@ import {
 const MEBIBYTE = 1024 * 1024;
 
 describe("DIST-R6 rejects a single file over 25 MiB", () => {
-  test("a file over the limit fails the build with its path and size", () => {
+  test("DIST-R6.1 a file over the limit fails the build with its path and size", () => {
     const files = [
       { path: "decks/talk/deck.json", bytes: 120 },
       { path: "decks/talk/assets/demo.mp4", bytes: MAX_FILE_BYTES + 1 },
@@ -27,7 +27,7 @@ describe("DIST-R6 rejects a single file over 25 MiB", () => {
     );
   });
 
-  test("a file exactly at the limit passes", () => {
+  test("DIST-R6.2 a file exactly at the limit passes", () => {
     const files = [{ path: "decks/talk/assets/demo.mp4", bytes: MAX_FILE_BYTES }];
 
     expect(() => checkFileSizes(files)).not.toThrow();
@@ -78,14 +78,14 @@ describe("DIST-R6 rejects a single file over 25 MiB", () => {
 });
 
 describe("DIST-R7 warns when the site exceeds 800 MiB", () => {
-  test("a site over 800 MiB gets a warning with its size and the 1 GB limit", () => {
+  test("DIST-R7.1 a site over 800 MiB gets a warning with its size and the 1 GB limit", () => {
     const warning = makeSiteSizeWarning(850 * MEBIBYTE);
 
     expect(warning).toContain("850.0 MiB");
     expect(warning).toContain("1 GB");
   });
 
-  test("a site within 800 MiB gets no warning", () => {
+  test("DIST-R7.2 a site within 800 MiB gets no warning", () => {
     expect(makeSiteSizeWarning(100 * MEBIBYTE)).toBeNull();
   });
 });

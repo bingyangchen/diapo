@@ -30,8 +30,9 @@ jobs:
 
   check:
     needs: changes
-    # Apart from `make lint-md`, which the `lint-md` job runs on every PR, nothing below
-    # checks Markdown, so a PR that changes only .md files skips this job.
+    # Apart from `make lint-md` and `make check-scenarios`, which the `lint-md` and
+    # `check-scenarios` jobs run on every PR, nothing below checks Markdown, so a PR that
+    # changes only .md files skips this job.
     # GitHub counts a job skipped by its condition as passing a required check, whereas a
     # workflow skipped by `paths-ignore` would leave the check pending and block the merge.
     # `!cancelled()` keeps this job running when the `changes` job fails.
@@ -67,3 +68,16 @@ jobs:
       # markdownlint needs no browsers, so this skips `make install`.
       - run: pnpm install
       - run: make lint-md
+
+  check-scenarios:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Nothing here pushes, so the token is not left in .git/config.
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # The check uses only Node's built-in modules, so this skips installing packages.
+      - run: make check-scenarios

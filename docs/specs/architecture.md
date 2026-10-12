@@ -42,9 +42,11 @@
 
 ### 測試
 
-`make check` 依序執行 lint、型別檢查與 Vitest 的測試，E2E test 另外由 `make e2e` 執行。
+`make check` 依序執行 lint、`make check-scenarios`、型別檢查與 Vitest 的測試，E2E test 另外由 `make e2e` 執行。
 
 > 設計理由：E2E test 要先 build 測試用的簡報，執行時間也比較長，所以不放進 `make check`。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+
+驗證 spec 情境的測試，標題以情境 ID 開頭；需要手動檢查的情境，步驟寫在 `tests/manual/` 裡和 spec 同名的檔案，規則寫在 sdd skill 的「Spec Conventions」。`make check-scenarios` 執行 `scripts/check-scenarios.ts`，確認每個情境都有測試或手動檢查的步驟，而且測試標題與 `tests/manual/` 寫的情境 ID 都存在於 spec。這個 script 從測試的程式碼讀出標題，不執行測試，也只用 Node 內建的模組，所以不必安裝套件就能執行。
 
 以下是實測過的 Playwright 行為與限制，寫 plan 決定情境用 E2E test 還是手動檢查時，不必重新查證：
 
@@ -63,6 +65,7 @@
 │       ├── slides/
 │       │   └── <slide-id>.tsx  每一頁一個 TSX 檔
 │       └── assets/             圖片、影片等素材
+├── scripts/                    開發用的檢查 script
 ├── src/
 │   ├── build/                  Build script、dev server 與 Vite plugin
 │   ├── framework/              頁面 import 的元件與 hook
@@ -72,6 +75,7 @@
 │   ├── unit/                   Vitest 的 unit test
 │   ├── integration/            Vitest 的 integration test
 │   ├── e2e/                    Playwright 的 E2E test
+│   ├── manual/                 需要手動檢查的情境的步驟
 │   └── fixtures/
 │       └── decks/              測試用的簡報
 └── dist/                       Build 出來的檔案，不 commit 進 git
@@ -80,7 +84,7 @@
     └── <deck-id>/              一份簡報的 slidetray
 ```
 
-所有測試集中在 `tests/`，依種類分成 `unit/`、`integration/`、`e2e/`；測試用的簡報放在 `tests/fixtures/decks/`。
+所有測試集中在 `tests/`，依種類分成 `unit/`、`integration/`、`e2e/`，需要手動檢查的情境的步驟寫在 `manual/`；測試用的簡報放在 `tests/fixtures/decks/`。
 
 > 設計理由：測試集中在 `tests/`，瀏覽專案時程式碼與測試不會混在一起。曾考慮把 unit test 放在被測的程式碼旁邊，方便找到某個模組的測試，但測試的名稱以需求 ID 開頭，用需求 ID 一樣找得到測試；而且 integration test 與 E2E test 跑的是完整的 build，不屬於任何一個模組，只能放在獨立的目錄，三種測試會變成兩套放法。測試用的簡報不放進 `decks/`，部署用的 build 才不會把這些簡報發布到網站上。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
@@ -196,11 +200,11 @@ GitHub Actions 的 workflow 放在 `.github/workflows/`：
 
 | Workflow | 觸發時機 | 做什麼 |
 | --- | --- | --- |
-| `ci.yml` | PR 開啟或更新時 | `check` job 依序執行 `make install`、`make check`、`make build-site`、`make e2e`，PR 只改 `.md` 檔時跳過；`lint-md` job 在每個 PR 都依序執行 `pnpm install`、`make lint-md` |
+| `ci.yml` | PR 開啟或更新時 | `check` job 依序執行 `make install`、`make check`、`make build-site`、`make e2e`，PR 只改 `.md` 檔時跳過；`lint-md` job 在每個 PR 都依序執行 `pnpm install`、`make lint-md`；`check-scenarios` job 在每個 PR 都執行 `make check-scenarios` |
 | `deploy.yml` | Merge 到 `main` 時 | 依序執行 `pnpm install`、`make build-site`，再透過 GitHub Actions 的 Pages 部署流程把 `dist/` 部署到 GitHub Pages |
 
-> 設計理由：Markdown 由 `lint-md` job 在每個 PR 檢查，`check` job 其他的步驟都不檢查 Markdown，所以只改 `.md` 檔的 PR 跳過 `check` job。改到其他檔案的 PR 每次更新都跑 E2E test，因為 E2E test 在本機跑完不到 10 秒，CI 上比較花時間的是下載瀏覽器，而且 public repo 用 GitHub Actions 的標準 runner 不用付費。曾考慮用 PR 的 label 觸發 E2E test，並把 E2E test 設成 merge 的條件，但 merge 條件看的是 PR 最新的 commit，所以開 PR 的人每次 push 之後都要重新加一次 label；GitHub 的 merge queue 能在 merge 前才跑 E2E test，但只開放給 organization 擁有的 repo。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+> 設計理由：Markdown 由 `lint-md` 與 `check-scenarios` 兩個 job 在每個 PR 檢查，`check` job 其他的步驟都不檢查 Markdown，所以只改 `.md` 檔的 PR 跳過 `check` job。改到其他檔案的 PR 每次更新都跑 E2E test，因為 E2E test 在本機跑完不到 10 秒，CI 上比較花時間的是下載瀏覽器，而且 public repo 用 GitHub Actions 的標準 runner 不用付費。曾考慮用 PR 的 label 觸發 E2E test，並把 E2E test 設成 merge 的條件，但 merge 條件看的是 PR 最新的 commit，所以開 PR 的人每次 push 之後都要重新加一次 label；GitHub 的 merge queue 能在 merge 前才跑 E2E test，但只開放給 organization 擁有的 repo。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
-`make e2e` 會自己 build `tests/fixtures/decks/`，所以 `ci.yml` 裡的 `make build-site` 只負責確認 `decks/` 的部署用 build 能成功。`deploy.yml` 與 `ci.yml` 的 `lint-md` job 用 `pnpm install` 安裝套件，不執行 `make install`，所以不會下載 Playwright 的瀏覽器。
+`make e2e` 會自己 build `tests/fixtures/decks/`，所以 `ci.yml` 裡的 `make build-site` 只負責確認 `decks/` 的部署用 build 能成功。`deploy.yml` 與 `ci.yml` 的 `lint-md` job 用 `pnpm install` 安裝套件，不執行 `make install`，所以不會下載 Playwright 的瀏覽器；`check-scenarios` job 只安裝 Node，不安裝任何套件。
 
 > 設計理由：`deploy.yml` 不再跑一次測試，因為同樣的測試已經在 PR 上跑過。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。

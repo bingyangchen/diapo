@@ -26,6 +26,7 @@
   },
   "include": [
     "src/build",
+    "scripts",
     "tests/unit",
     "tests/integration",
     "tests/e2e",

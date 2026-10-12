@@ -18,7 +18,7 @@ import {
 // hint-negative, toggle, diagram, and finale (2 steps).
 
 test.describe("STEP-R1 a Step shows from the step its at names", () => {
-  test("steps reveal items one at a time", async ({ page }) => {
+  test("STEP-R1.1 steps reveal items one at a time", async ({ page }) => {
     await openStep(page, "list");
 
     await page.keyboard.press("ArrowRight");
@@ -27,7 +27,7 @@ test.describe("STEP-R1 a Step shows from the step its at names", () => {
     await expect(page.getByText("Second point")).toBeHidden();
   });
 
-  test("stepping back hides the item again", async ({ page }) => {
+  test("STEP-R1.2 stepping back hides the item again", async ({ page }) => {
     await openStep(page, "list", 2);
 
     await page.keyboard.press("ArrowLeft");
@@ -36,7 +36,7 @@ test.describe("STEP-R1 a Step shows from the step its at names", () => {
     await expect(page.getByText("First point")).toBeVisible();
   });
 
-  test("two Steps with the same at appear together", async ({ page }) => {
+  test("STEP-R1.3 two Steps with the same at appear together", async ({ page }) => {
     await openStep(page, "columns", 1);
     const chart = page.getByRole("img", { name: "Chart", includeHidden: true });
     await expect(page.getByText("Left two")).toBeHidden();
@@ -48,7 +48,9 @@ test.describe("STEP-R1 a Step shows from the step its at names", () => {
     await expect(chart).toBeVisible();
   });
 
-  test("Steps appear in the order of their at, not the DOM", async ({ page }) => {
+  test("STEP-R1.4 Steps appear in the order of their at, not the DOM", async ({
+    page,
+  }) => {
     await openStep(page, "reversed");
 
     await page.keyboard.press("ArrowRight");
@@ -59,7 +61,9 @@ test.describe("STEP-R1 a Step shows from the step its at names", () => {
 });
 
 test.describe("STEP-R2 a Step keeps its place before it appears", () => {
-  test("revealing an item leaves the rest of the slide in place", async ({ page }) => {
+  test("STEP-R2.1 revealing an item leaves the rest of the slide in place", async ({
+    page,
+  }) => {
     await openStep(page, "list");
     const closingBefore = await getBox(page.getByText("Closing"));
 
@@ -69,7 +73,9 @@ test.describe("STEP-R2 a Step keeps its place before it appears", () => {
     expect(await getBox(page.getByText("Closing"))).toEqual(closingBefore);
   });
 
-  test("clicking where a hidden button sits does not press it", async ({ page }) => {
+  test("STEP-R2.2 clicking where a hidden button sits does not press it", async ({
+    page,
+  }) => {
     await openStep(page, "hidden-button");
     const button = page.getByRole("button", { name: "Press", includeHidden: true });
     const center = await getCenter(button);
@@ -83,7 +89,10 @@ test.describe("STEP-R2 a Step keeps its place before it appears", () => {
     await expect(page.getByText("Presses: 1")).toBeVisible();
   });
 
-  test("Tab does not focus a hidden button", async ({ page, browserName }) => {
+  test("STEP-R2.3 Tab does not focus a hidden button", async ({
+    page,
+    browserName,
+  }) => {
     await openStep(page, "hidden-button");
     const button = page.getByRole("button", { name: "Press", includeHidden: true });
     // Like Safari, WebKit's Tab skips buttons unless Option (Alt) is held.
@@ -103,23 +112,21 @@ test.describe("STEP-R2 a Step keeps its place before it appears", () => {
 });
 
 test.describe("STEP-R3 a Step does not change the layout", () => {
-  for (const layout of ["grid", "flex"]) {
-    test(`items in a ${layout} keep the position and size they have without a Step`, async ({
-      page,
-    }) => {
-      await openStep(page, "layout", 1);
+  test("STEP-R3.1 items in a grid keep the position and size they have without a Step", async ({
+    page,
+  }) => {
+    await expectLayoutKept(page, "grid");
+  });
 
-      const steppedBoxes = await getItemBoxes(page, `${layout}-stepped`);
-      const plainBoxes = await getItemBoxes(page, `${layout}-plain`);
-      // The two copies sit in different rows, so compares positions within each row.
-      const rowOffset = plainBoxes[0].y - steppedBoxes[0].y;
-      expect(
-        steppedBoxes.map((box) => roundBox({ ...box, y: box.y + rowOffset })),
-      ).toEqual(plainBoxes.map(roundBox));
-    });
-  }
+  test("STEP-R3.2 items in a flex layout keep the position and size they have without a Step", async ({
+    page,
+  }) => {
+    await expectLayoutKept(page, "flex");
+  });
 
-  test("a Step inside an svg logs an error naming the slide", async ({ page }) => {
+  test("STEP-R3.3 a Step inside an svg logs an error naming the slide", async ({
+    page,
+  }) => {
     const errors = collectConsoleMessages(page, "error");
 
     await page.goto(makeDeckUrl("steps", "#/diagram"));
@@ -130,7 +137,7 @@ test.describe("STEP-R3 a Step does not change the layout", () => {
 });
 
 test.describe("STEP-R4 useStep reads the current step", () => {
-  test("a component switches content at its step", async ({ page }) => {
+  test("STEP-R4.1 a component switches content at its step", async ({ page }) => {
     await openStep(page, "list", 2);
 
     await page.keyboard.press("ArrowRight");
@@ -139,7 +146,7 @@ test.describe("STEP-R4 useStep reads the current step", () => {
     await expect(page.getByText("Old conclusion")).toHaveCount(0);
   });
 
-  test("stepping back switches the content back", async ({ page }) => {
+  test("STEP-R4.2 stepping back switches the content back", async ({ page }) => {
     await openStep(page, "list", 3);
 
     await page.keyboard.press("ArrowLeft");
@@ -150,7 +157,7 @@ test.describe("STEP-R4 useStep reads the current step", () => {
 });
 
 test.describe("STEP-R5 a slide's step count is its largest registered step", () => {
-  test("Steps and useStep both count", async ({ page }) => {
+  test("STEP-R5.1 Steps and useStep both count", async ({ page }) => {
     await openStep(page, "list");
     // Each step shows its item while the next step's item stays hidden.
     const expectedSteps: [number, string, string | null][] = [
@@ -172,7 +179,7 @@ test.describe("STEP-R5 a slide's step count is its largest registered step", () 
 });
 
 test.describe("STEP-R6 changing steps keeps the slide as it is", () => {
-  test("a counter keeps its count across steps", async ({ page }) => {
+  test("STEP-R6.1 a counter keeps its count across steps", async ({ page }) => {
     await openStep(page, "counter", 1);
     for (let count = 0; count < 3; count++) {
       await page.getByRole("button", { name: `Count: ${count}` }).click();
@@ -189,7 +196,9 @@ test.describe("STEP-R6 changing steps keeps the slide as it is", () => {
 });
 
 test.describe("STEP-R7 a skipped step still plays", () => {
-  test("a skipped step warns and plays as an unchanged screen", async ({ page }) => {
+  test("STEP-R7.1 a skipped step warns and plays as an unchanged screen", async ({
+    page,
+  }) => {
     const warnings = collectConsoleMessages(page, "warning");
 
     await openStep(page, "gaps", 1);
@@ -203,7 +212,9 @@ test.describe("STEP-R7 a skipped step still plays", () => {
     await expect(page.getByText("Gap three")).toBeHidden();
   });
 
-  test("opening the deck at a slide with a skipped step warns", async ({ page }) => {
+  test("STEP-R7.1 opening the deck at a slide with a skipped step warns", async ({
+    page,
+  }) => {
     const warnings = collectConsoleMessages(page, "warning");
 
     await page.goto(makeDeckUrl("steps", "#/gaps/1"));
@@ -215,7 +226,9 @@ test.describe("STEP-R7 a skipped step still plays", () => {
 });
 
 test.describe("STEP-R8 invalid steps", () => {
-  test("a Step at 0 shows from step 0 and logs an error", async ({ page }) => {
+  test("STEP-R8.1 a Step at 0 shows from step 0 and logs an error", async ({
+    page,
+  }) => {
     const errors = collectConsoleMessages(page, "error");
 
     await openStep(page, "hint-zero");
@@ -228,7 +241,9 @@ test.describe("STEP-R8 invalid steps", () => {
     await expectSlide(page, "Hint fraction");
   });
 
-  test("a Step at a fraction shows from step 0 and logs an error", async ({ page }) => {
+  test("STEP-R8.2 a Step at a fraction shows from step 0 and logs an error", async ({
+    page,
+  }) => {
     const errors = collectConsoleMessages(page, "error");
 
     await openStep(page, "hint-fraction");
@@ -239,7 +254,7 @@ test.describe("STEP-R8 invalid steps", () => {
       .toContain('Slide "hint-fraction" registers step 1.5');
   });
 
-  test("an invalid useStep argument logs an error and does not count", async ({
+  test("STEP-R8.3 an invalid useStep argument logs an error and does not count", async ({
     page,
   }) => {
     const errors = collectConsoleMessages(page, "error");
@@ -256,26 +271,25 @@ test.describe("STEP-R8 invalid steps", () => {
     await expectSlide(page, "Toggle");
   });
 
-  const slideIdToInvalidStep = {
-    "hint-zero": "0",
-    "hint-fraction": "1.5",
-    "hint-negative": "-1",
-  };
-  for (const [slideId, invalidStep] of Object.entries(slideIdToInvalidStep)) {
-    test(`opening the deck at ${slideId} logs an error`, async ({ page }) => {
-      const errors = collectConsoleMessages(page, "error");
+  test("STEP-R8.1 opening the deck at hint-zero logs an error", async ({ page }) => {
+    await expectOpeningLogsInvalidStep(page, "hint-zero", "0");
+  });
 
-      await page.goto(makeDeckUrl("steps", `#/${slideId}`));
+  test("STEP-R8.2 opening the deck at hint-fraction logs an error", async ({
+    page,
+  }) => {
+    await expectOpeningLogsInvalidStep(page, "hint-fraction", "1.5");
+  });
 
-      await expect
-        .poll(() => errors.join("\n"))
-        .toContain(`Slide "${slideId}" registers step ${invalidStep}`);
-    });
-  }
+  test("STEP-R8.3 opening the deck at hint-negative logs an error", async ({
+    page,
+  }) => {
+    await expectOpeningLogsInvalidStep(page, "hint-negative", "-1");
+  });
 });
 
 test.describe("STEP-R9 stepping through a slide before changing slides", () => {
-  test("next moves one step forward", async ({ page }) => {
+  test("STEP-R9.1 next moves one step forward", async ({ page }) => {
     await openStep(page, "list");
 
     await page.keyboard.press("ArrowRight");
@@ -286,7 +300,9 @@ test.describe("STEP-R9 stepping through a slide before changing slides", () => {
     await expect(page.getByText("Second point")).toBeHidden();
   });
 
-  test("next on the last step moves to the next slide's step 0", async ({ page }) => {
+  test("STEP-R9.2 next on the last step moves to the next slide's step 0", async ({
+    page,
+  }) => {
     await openStep(page, "list", 3);
 
     await page.keyboard.press("ArrowRight");
@@ -295,7 +311,7 @@ test.describe("STEP-R9 stepping through a slide before changing slides", () => {
     await expect(page).toHaveURL(/#\/recap$/);
   });
 
-  test("previous moves one step back", async ({ page }) => {
+  test("STEP-R9.3 previous moves one step back", async ({ page }) => {
     await openStep(page, "list", 2);
 
     await page.keyboard.press("ArrowLeft");
@@ -304,7 +320,7 @@ test.describe("STEP-R9 stepping through a slide before changing slides", () => {
     await expect(page.getByText("Second point")).toBeHidden();
   });
 
-  test("previous on step 0 shows the previous slide's last step without step 0", async ({
+  test("STEP-R9.4 previous on step 0 shows the previous slide's last step without step 0", async ({
     page,
   }) => {
     await openStep(page, "recap");
@@ -322,7 +338,7 @@ test.describe("STEP-R9 stepping through a slide before changing slides", () => {
   test.describe("with touch", () => {
     test.use({ hasTouch: true });
 
-    test("swiping left moves one step forward", async ({ page }) => {
+    test("STEP-R9.5 swiping left moves one step forward", async ({ page }) => {
       await openStep(page, "list");
 
       await swipe(page, { deltaX: -200 });
@@ -332,7 +348,7 @@ test.describe("STEP-R9 stepping through a slide before changing slides", () => {
     });
   });
 
-  test("next on the last slide's last step stays there", async ({ page }) => {
+  test("STEP-R9.6 next on the last slide's last step stays there", async ({ page }) => {
     await openStep(page, "finale", 2);
 
     await page.keyboard.press("ArrowRight");
@@ -341,7 +357,9 @@ test.describe("STEP-R9 stepping through a slide before changing slides", () => {
     await expect(page).toHaveURL(/#\/finale\/2$/);
   });
 
-  test("previous on the first slide's step 0 stays there", async ({ page }) => {
+  test("STEP-R9.7 previous on the first slide's step 0 stays there", async ({
+    page,
+  }) => {
     await openDeck(page, "steps");
 
     await page.keyboard.press("ArrowLeft");
@@ -352,7 +370,7 @@ test.describe("STEP-R9 stepping through a slide before changing slides", () => {
 });
 
 test.describe("STEP-R10 jumps start at step 0", () => {
-  test("End shows the last slide's step 0", async ({ page }) => {
+  test("STEP-R10.1 End shows the last slide's step 0", async ({ page }) => {
     await openDeck(page, "steps");
 
     await page.keyboard.press("End");
@@ -362,7 +380,7 @@ test.describe("STEP-R10 jumps start at step 0", () => {
     await expect(page.getByText("Finale one")).toBeHidden();
   });
 
-  test("a page number jump shows that slide's step 0", async ({ page }) => {
+  test("STEP-R10.2 a page number jump shows that slide's step 0", async ({ page }) => {
     await openDeck(page, "steps");
 
     await page.keyboard.press("2");
@@ -373,7 +391,9 @@ test.describe("STEP-R10 jumps start at step 0", () => {
     await expect(page.getByText("First point")).toBeHidden();
   });
 
-  test("a link without a step shows that slide's step 0", async ({ page }) => {
+  test("STEP-R10.3 a link without a step shows that slide's step 0", async ({
+    page,
+  }) => {
     await openStep(page, "recap");
 
     await page.getByRole("link", { name: "List start" }).click();
@@ -384,7 +404,7 @@ test.describe("STEP-R10 jumps start at step 0", () => {
 });
 
 test.describe("STEP-R11 the URL hash records the current step", () => {
-  test("a step forward writes the step into the hash", async ({ page }) => {
+  test("STEP-R11.1 a step forward writes the step into the hash", async ({ page }) => {
     await openStep(page, "list");
 
     await page.keyboard.press("ArrowRight");
@@ -392,7 +412,9 @@ test.describe("STEP-R11 the URL hash records the current step", () => {
     await expect(page).toHaveURL(/#\/list\/1$/);
   });
 
-  test("returning to step 0 leaves the step out of the hash", async ({ page }) => {
+  test("STEP-R11.2 returning to step 0 leaves the step out of the hash", async ({
+    page,
+  }) => {
     await openStep(page, "list", 1);
 
     await page.keyboard.press("ArrowLeft");
@@ -400,14 +422,14 @@ test.describe("STEP-R11 the URL hash records the current step", () => {
     await expect(page).toHaveURL(/#\/list$/);
   });
 
-  test("opening a hash with a step shows that step", async ({ page }) => {
+  test("STEP-R11.3 opening a hash with a step shows that step", async ({ page }) => {
     await page.goto(makeDeckUrl("steps", "#/list/2"));
 
     await expect(page.getByText("Second point")).toBeVisible();
     await expect(page.getByText("Old conclusion")).toBeVisible();
   });
 
-  test("reloading the page keeps the step", async ({ page }) => {
+  test("STEP-R11.4 reloading the page keeps the step", async ({ page }) => {
     await openStep(page, "list", 2);
 
     await page.reload();
@@ -416,7 +438,9 @@ test.describe("STEP-R11 the URL hash records the current step", () => {
     await expect(page.getByText("Old conclusion")).toBeVisible();
   });
 
-  test("opening a hash with step 0 shows step 0 without the step", async ({ page }) => {
+  test("STEP-R11.5 opening a hash with step 0 shows step 0 without the step", async ({
+    page,
+  }) => {
     await page.goto(makeDeckUrl("steps", "#/list/0"));
 
     await expect(page).toHaveURL(/#\/list$/);
@@ -424,7 +448,7 @@ test.describe("STEP-R11 the URL hash records the current step", () => {
     await expect(page.getByText("First point")).toBeHidden();
   });
 
-  test("a link with a step shows that step", async ({ page }) => {
+  test("STEP-R11.6 a link with a step shows that step", async ({ page }) => {
     await openStep(page, "recap");
 
     await page.getByRole("link", { name: "List step 2" }).click();
@@ -433,7 +457,7 @@ test.describe("STEP-R11 the URL hash records the current step", () => {
     await expect(page.getByText("Old conclusion")).toBeVisible();
   });
 
-  test("editing the step in the hash shows that step", async ({ page }) => {
+  test("STEP-R11.7 editing the step in the hash shows that step", async ({ page }) => {
     await openStep(page, "list", 1);
 
     await page.goto(makeDeckUrl("steps", "#/list/3"));
@@ -443,7 +467,7 @@ test.describe("STEP-R11 the URL hash records the current step", () => {
 });
 
 test.describe("STEP-R12 a hash step beyond the step count", () => {
-  test("opening it shows the last step and warns", async ({ page }) => {
+  test("STEP-R12.1 opening it shows the last step and warns", async ({ page }) => {
     const warnings = collectConsoleMessages(page, "warning");
 
     await page.goto(makeDeckUrl("steps", "#/list/5"));
@@ -453,7 +477,7 @@ test.describe("STEP-R12 a hash step beyond the step count", () => {
     await expect.poll(() => warnings.join("\n")).toContain("#/list/5");
   });
 
-  test("changing the hash to it during playback shows the last step", async ({
+  test("STEP-R12.2 changing the hash to it during playback shows the last step", async ({
     page,
   }) => {
     await openDeck(page, "steps");
@@ -464,7 +488,7 @@ test.describe("STEP-R12 a hash step beyond the step count", () => {
     await expect(page.getByText("New conclusion")).toBeVisible();
   });
 
-  test("a slide without steps drops the step", async ({ page }) => {
+  test("STEP-R12.3 a slide without steps drops the step", async ({ page }) => {
     await page.goto(makeDeckUrl("steps", "#/agenda/2"));
 
     await expectSlide(page, "Agenda");
@@ -473,7 +497,7 @@ test.describe("STEP-R12 a hash step beyond the step count", () => {
 });
 
 test.describe("STEP-R13 a malformed hash step", () => {
-  test("opening a step that is not a number shows step 0 and warns", async ({
+  test("STEP-R13.1 opening a step that is not a number shows step 0 and warns", async ({
     page,
   }) => {
     const warnings = collectConsoleMessages(page, "warning");
@@ -486,7 +510,9 @@ test.describe("STEP-R13 a malformed hash step", () => {
     await expect.poll(() => warnings.join("\n")).toContain("#/list/abc");
   });
 
-  test("changing the hash to it during playback shows step 0", async ({ page }) => {
+  test("STEP-R13.4 changing the hash to it during playback shows step 0", async ({
+    page,
+  }) => {
     await openDeck(page, "steps");
 
     await page.goto(makeDeckUrl("steps", "#/list/abc"));
@@ -497,7 +523,7 @@ test.describe("STEP-R13 a malformed hash step", () => {
 });
 
 test.describe("STEP-R14 a step count that changes while the slide shows", () => {
-  test("a step count that shrinks while the slide shows keeps the step", async ({
+  test("STEP-R14.1 a step count that shrinks while the slide shows keeps the step", async ({
     page,
   }) => {
     await openStep(page, "toggle", 2);
@@ -559,6 +585,37 @@ async function recordListStepZero(page: Page): Promise<void> {
       }
     }).observe(document.body, { subtree: true, childList: true, attributes: true });
   `);
+}
+
+/**
+ * Checks that the `layout` slide's items wrapped in a Step sit where the copies without a
+ * Step do.
+ */
+async function expectLayoutKept(page: Page, layout: "grid" | "flex"): Promise<void> {
+  await openStep(page, "layout", 1);
+
+  const steppedBoxes = await getItemBoxes(page, `${layout}-stepped`);
+  const plainBoxes = await getItemBoxes(page, `${layout}-plain`);
+  // The two copies sit in different rows, so compares positions within each row.
+  const rowOffset = plainBoxes[0].y - steppedBoxes[0].y;
+  expect(steppedBoxes.map((box) => roundBox({ ...box, y: box.y + rowOffset }))).toEqual(
+    plainBoxes.map(roundBox),
+  );
+}
+
+/** Opens the `steps` deck directly at a slide and checks the error for its invalid step. */
+async function expectOpeningLogsInvalidStep(
+  page: Page,
+  slideId: string,
+  invalidStep: string,
+): Promise<void> {
+  const errors = collectConsoleMessages(page, "error");
+
+  await page.goto(makeDeckUrl("steps", `#/${slideId}`));
+
+  await expect
+    .poll(() => errors.join("\n"))
+    .toContain(`Slide "${slideId}" registers step ${invalidStep}`);
 }
 
 async function getItemBoxes(

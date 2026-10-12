@@ -10,7 +10,7 @@ const EXAMPLE_URL = makeFileUrl(path.join(E2E_OUTPUT, "example", "index.html"));
 const SECOND_DECK_URL = makeFileUrl(path.join(E2E_OUTPUT, "second-deck", "index.html"));
 
 test.describe("PLAY-R1 shows the first slide when a deck opens", () => {
-  test("opening a deck without a hash shows the first slide in deck.json", async ({
+  test("PLAY-R1.1 opening a deck without a hash shows the first slide in deck.json", async ({
     page,
   }) => {
     await page.goto(EXAMPLE_URL);
@@ -21,7 +21,9 @@ test.describe("PLAY-R1 shows the first slide when a deck opens", () => {
 });
 
 test.describe("PLAY-R2 scales the canvas proportionally", () => {
-  test("a 16:9 window shows the canvas without black bars", async ({ page }) => {
+  test("PLAY-R2.1 a 16:9 window shows the canvas without black bars", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(EXAMPLE_URL);
 
@@ -33,7 +35,9 @@ test.describe("PLAY-R2 scales the canvas proportionally", () => {
     });
   });
 
-  test("a 4:3 window shows 96px black bars above and below", async ({ page }) => {
+  test("PLAY-R2.2 a 4:3 window shows 96px black bars above and below", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto(EXAMPLE_URL);
 
@@ -46,7 +50,7 @@ test.describe("PLAY-R2 scales the canvas proportionally", () => {
     await expect(page.locator("body")).toHaveCSS("background-color", "rgb(0, 0, 0)");
   });
 
-  test("resizing the window rescales the canvas and keeps element positions", async ({
+  test("PLAY-R2.3 resizing the window rescales the canvas and keeps element positions", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
@@ -65,13 +69,15 @@ test.describe("PLAY-R2 scales the canvas proportionally", () => {
 });
 
 test.describe("PLAY-R3 the browser tab shows the deck title", () => {
-  test("opening a deck shows its title in the tab", async ({ page }) => {
+  test("PLAY-R3.1 opening a deck shows its title in the tab", async ({ page }) => {
     await page.goto(EXAMPLE_URL);
 
     await expect(page).toHaveTitle("範例");
   });
 
-  test("a title with special characters shows as written", async ({ page }) => {
+  test("PLAY-R3.2 a title with special characters shows as written", async ({
+    page,
+  }) => {
     await page.goto(SECOND_DECK_URL);
 
     await expect(page).toHaveTitle(SECOND_DECK_TITLE);
