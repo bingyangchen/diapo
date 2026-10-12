@@ -11,7 +11,7 @@
 | 語言 | TypeScript 6.0 |
 | 執行環境 | Node 24，版本寫在 `.nvmrc` |
 | 套件管理 | pnpm，版本寫在 `package.json` 的 `packageManager` |
-| Lint 與格式 | ESLint 與 Prettier |
+| Lint 與格式 | 程式碼用 ESLint 與 Prettier，Markdown 用 markdownlint |
 | 測試 | Vitest 跑 unit test 與 integration test，Playwright 跑 E2E test |
 
 講者與 AI agent 都從 `Makefile` 執行指令，指令列表見 `README.md`。
@@ -37,6 +37,8 @@
 ### Lint 與格式
 
 > 設計理由：曾考慮用 Biome 處理 lint 與格式化，但 ESLint 的 plugin 選擇比較多。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+
+`make lint` 先執行 `make lint-md`，用 markdownlint 檢查 Markdown，再用 ESLint 與 Prettier 檢查其他檔案；`make format` 用這三個工具自動修正能修正的問題。Prettier 不處理 Markdown，原因寫在 `.prettierignore` 的註解。markdownlint 的規則寫在 `.markdownlint.json`，要檢查哪些檔案寫在 `.markdownlint-cli2.jsonc`：markdownlint 檢查 repo 裡所有的 Markdown，但不檢查 `docs/plans/archive/` 與 `.gitignore` 排除的檔案。
 
 ### 測試
 
@@ -194,11 +196,11 @@ GitHub Actions 的 workflow 放在 `.github/workflows/`：
 
 | Workflow | 觸發時機 | 做什麼 |
 | --- | --- | --- |
-| `ci.yml` | PR 開啟或更新時 | 依序執行 `make install`、`make check`、`make build-site`、`make e2e`；PR 只改 `.md` 檔時全部跳過 |
+| `ci.yml` | PR 開啟或更新時 | `check` job 依序執行 `make install`、`make check`、`make build-site`、`make e2e`，PR 只改 `.md` 檔時跳過；`lint-md` job 在每個 PR 都依序執行 `pnpm install`、`make lint-md` |
 | `deploy.yml` | Merge 到 `main` 時 | 依序執行 `pnpm install`、`make build-site`，再透過 GitHub Actions 的 Pages 部署流程把 `dist/` 部署到 GitHub Pages |
 
-> 設計理由：`make check`、`make build-site` 與 `make e2e` 都不檢查 Markdown，所以只改 `.md` 檔的 PR 跳過 `ci.yml` 的所有步驟。改到其他檔案的 PR 每次更新都跑 E2E test，因為 E2E test 在本機跑完不到 10 秒，CI 上比較花時間的是下載瀏覽器，而且 public repo 用 GitHub Actions 的標準 runner 不用付費。曾考慮用 PR 的 label 觸發 E2E test，並把 E2E test 設成 merge 的條件，但 merge 條件看的是 PR 最新的 commit，所以開 PR 的人每次 push 之後都要重新加一次 label；GitHub 的 merge queue 能在 merge 前才跑 E2E test，但只開放給 organization 擁有的 repo。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+> 設計理由：Markdown 由 `lint-md` job 在每個 PR 檢查，`check` job 其他的步驟都不檢查 Markdown，所以只改 `.md` 檔的 PR 跳過 `check` job。改到其他檔案的 PR 每次更新都跑 E2E test，因為 E2E test 在本機跑完不到 10 秒，CI 上比較花時間的是下載瀏覽器，而且 public repo 用 GitHub Actions 的標準 runner 不用付費。曾考慮用 PR 的 label 觸發 E2E test，並把 E2E test 設成 merge 的條件，但 merge 條件看的是 PR 最新的 commit，所以開 PR 的人每次 push 之後都要重新加一次 label；GitHub 的 merge queue 能在 merge 前才跑 E2E test，但只開放給 organization 擁有的 repo。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
-`make e2e` 會自己 build `tests/fixtures/decks/`，所以 `ci.yml` 裡的 `make build-site` 只負責確認 `decks/` 的部署用 build 能成功。`deploy.yml` 用 `pnpm install` 安裝套件，不執行 `make install`，所以部署時不會下載 Playwright 的瀏覽器。
+`make e2e` 會自己 build `tests/fixtures/decks/`，所以 `ci.yml` 裡的 `make build-site` 只負責確認 `decks/` 的部署用 build 能成功。`deploy.yml` 與 `ci.yml` 的 `lint-md` job 用 `pnpm install` 安裝套件，不執行 `make install`，所以不會下載 Playwright 的瀏覽器。
 
 > 設計理由：`deploy.yml` 不再跑一次測試，因為同樣的測試已經在 PR 上跑過。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。

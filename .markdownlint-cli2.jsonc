@@ -1,0 +1,11 @@
+{
+  "globs": ["**/*.md"],
+  "ignores": [
+    // Archived plans must never be edited, so their violations could never be fixed.
+    "docs/plans/archive/**",
+    // Symlinks to AGENTS.md and .agents/skills/sdd/, linted at their real paths.
+    "CLAUDE.md",
+    ".claude/skills/**",
+  ],
+  "gitignore": true,
+}

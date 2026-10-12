@@ -23,8 +23,9 @@ make dev DECK=example  # live preview of decks/example
 | `make build` | Build a slidetray for every deck, plus the site's home page, into `dist/` |
 | `make build-site` | Build what gets deployed: skip unpublished decks and warn when the site nears the GitHub Pages size limit |
 | `make serve` | Serve `dist/` with a local static server |
-| `make lint` | Check the code with ESLint and Prettier |
-| `make format` | Fix what ESLint and Prettier can fix automatically |
+| `make lint` | Run `lint-md`, then check the code with ESLint and Prettier |
+| `make lint-md` | Check the Markdown with markdownlint |
+| `make format` | Fix what ESLint, Prettier, and markdownlint can fix automatically |
 | `make typecheck` | Type-check the browser code and the Node code |
 | `make test` | Run the Vitest unit and integration tests |
 | `make e2e` | Build the fixture decks and run the Playwright tests in all three browsers |

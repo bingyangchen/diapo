@@ -3,7 +3,7 @@ DECK ?=
 
 BUILD = node src/build/cli.ts
 
-.PHONY: install dev build build-site serve lint format typecheck test e2e check
+.PHONY: install dev build build-site serve lint lint-md format typecheck test e2e check
 
 install:
 	pnpm install
@@ -23,13 +23,17 @@ build-site:
 serve:
 	pnpm exec vite preview --outDir dist
 
-lint:
+lint: lint-md
 	pnpm exec eslint .
 	pnpm exec prettier --check .
+
+lint-md:
+	pnpm exec markdownlint-cli2
 
 format:
 	pnpm exec eslint --fix .
 	pnpm exec prettier --write .
+	pnpm exec markdownlint-cli2 --fix
 
 typecheck:
 	pnpm exec tsc --noEmit -p tsconfig.app.json
