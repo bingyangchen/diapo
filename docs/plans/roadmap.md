@@ -14,7 +14,7 @@ flowchart TD
   overview("預覽總覽<br/>未規劃"):::unplanned
   reorder("排序與隱藏<br/>未規劃"):::unplanned
   annotation("畫筆標註<br/>未規劃"):::unplanned
-  presenter("講者模式<br/>未規劃"):::unplanned
+  P0004("0004 講者模式<br/>已核准"):::approved
   theme("主題、亮暗配色與字型<br/>未規劃"):::unplanned
   layouts("版型元件<br/>未規劃"):::unplanned
   media("圖片與影片<br/>未規劃"):::unplanned
@@ -32,7 +32,7 @@ flowchart TD
   P0001 --> P0002 --> P0003 --> transitions --> magic_move
   P0003 --> overview --> reorder
   P0002 --> annotation
-  P0003 --> presenter --> skill_generate
+  P0003 --> P0004 --> skill_generate
   P0003 --> pdf_export
   P0003 --> layout_check
   P0001 --> theme --> layouts --> layout_check --> skill_generate
@@ -66,7 +66,7 @@ flowchart TD
 
 ### 講者模式
 
-講者在筆電上看到目前頁、下一頁、備註與經過時間，投影幕只顯示簡報。播放器另外開一個講者視窗，兩個視窗的頁碼保持同步；備註以 Markdown 撰寫，寫在每一頁的 TSX 檔裡。
+講者在筆電上看到目前頁、下一步、下一頁、備註與時間，投影幕只顯示簡報。播放器另外開一個講者視窗，目前的位置以原本播放簡報的觀眾視窗為準，講者在任一個視窗操作，兩個視窗都一起換頁；備註以 Markdown 撰寫，寫在每一頁的 TSX 檔裡。計劃寫在 [0004](0004-presenter-mode.md)。
 
 ### 主題與版型
 
