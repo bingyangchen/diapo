@@ -37,16 +37,16 @@ Your responses must be authoritative, highly precise, and completely free of fil
 ## Language
 
 - Write code, identifiers, and code comments in English.
-- Write the README and agent skills in English.
+- Write the README and agent skills in English, except the `sdd` skill's templates, which follow the language of the documents they produce.
 - Specs, plans, the roadmap, PR descriptions, and the manual checks in `tests/manual/` follow the language rules in the `sdd` skill.
 
 ## Spec-Driven Development
 
-This repo uses spec-driven development: every change starts from a spec or plan document, and code follows. Before making any change to this repo (code, docs, or config), load the `sdd` skill and follow it.
+This repo uses spec-driven development: every change to spec'd behavior or architecture starts from a plan, and code follows. Before making any change to this repo (code, docs, or config), load the `sdd` skill and follow it.
 
 When reading docs for any purpose:
 
-- `docs/specs/` describes what the code on the `main` branch implements now.
+- `docs/specs/` describes what the code on the `main` branch implements now. The exception is the positioning, target users, scope, and non-goals in `docs/specs/product.md`, which describe the intended product, including features not built yet.
 - `docs/plans/` and `docs/plans/roadmap.md` describe approved and future changes, not current behavior.
 - `docs/plans/archive/` is history. Never treat it as current guidance.
 
