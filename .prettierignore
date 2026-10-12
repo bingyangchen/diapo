@@ -1,3 +1,4 @@
-# Markdown follows .markdownlint.json. Prettier would pad every table cell to align columns.
+# Prettier aligns table columns, so widening one cell re-pads the whole column and puts
+# the entire table in the diff. markdownlint checks Markdown instead (`make lint-md`).
 *.md
 pnpm-lock.yaml
