@@ -29,7 +29,8 @@ make dev DECK=example  # live preview of decks/example
 | `make typecheck` | Type-check the browser code and the Node code |
 | `make test` | Run the Vitest unit and integration tests |
 | `make e2e` | Build the fixture decks and run the Playwright tests in all three browsers |
-| `make check` | Run `lint`, `typecheck`, and `test` in order |
+| `make check-scenarios` | Check that every scenario in `docs/specs/` has a test or a manual check in `tests/manual/` |
+| `make check` | Run `lint`, `check-scenarios`, `typecheck`, and `test` in order |
 
 `make dev`, `make build`, and `make build-site` read decks from `decks/`. Pass `DECKS_DIR=tests/fixtures/decks` to work on the player against the test decks.
 
@@ -135,3 +136,4 @@ This repository follows spec-driven development; see `AGENTS.md`.
 
 - `docs/specs/` describes what the code on `main` implements.
 - `docs/plans/` holds approved changes, and `docs/plans/roadmap.md` shows what comes next.
+- `tests/manual/` holds the steps for the scenarios that need a manual check.

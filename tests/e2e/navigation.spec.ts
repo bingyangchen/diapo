@@ -19,26 +19,32 @@ import {
 // with widgets, counter, and counter-again.
 
 test.describe("NAV-R1 the URL hash records the current slide", () => {
-  test("opening a URL with a slide hash shows that slide", async ({ page }) => {
+  test("NAV-R1.1 opening a URL with a slide hash shows that slide", async ({
+    page,
+  }) => {
     await page.goto(makeDeckUrl("example", "#/agenda"));
 
     await expectSlide(page, "Agenda");
   });
 
-  test("opening a URL without a hash adds the first slide's hash", async ({ page }) => {
+  test("NAV-R1.2 opening a URL without a hash adds the first slide's hash", async ({
+    page,
+  }) => {
     await page.goto(makeDeckUrl("example"));
 
     await expect(page).toHaveURL(/#\/intro$/);
   });
 
-  test("a hash of #/ shows the first slide and becomes its hash", async ({ page }) => {
+  test("NAV-R1.3 a hash of #/ shows the first slide and becomes its hash", async ({
+    page,
+  }) => {
     await page.goto(makeDeckUrl("example", "#/"));
 
     await expectSlide(page, "Intro");
     await expect(page).toHaveURL(/#\/intro$/);
   });
 
-  test("changing slides updates the hash", async ({ page }) => {
+  test("NAV-R1.4 changing slides updates the hash", async ({ page }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("ArrowRight");
@@ -46,7 +52,7 @@ test.describe("NAV-R1 the URL hash records the current slide", () => {
     await expect(page).toHaveURL(/#\/agenda$/);
   });
 
-  test("reloading the page keeps the slide", async ({ page }) => {
+  test("NAV-R1.5 reloading the page keeps the slide", async ({ page }) => {
     await openDeck(page, "example");
     await page.keyboard.press("ArrowRight");
     await expect(page).toHaveURL(/#\/agenda$/);
@@ -56,7 +62,7 @@ test.describe("NAV-R1 the URL hash records the current slide", () => {
     await expectSlide(page, "Agenda");
   });
 
-  test("editing the hash shows the slide it names", async ({ page }) => {
+  test("NAV-R1.6 editing the hash shows the slide it names", async ({ page }) => {
     await openDeck(page, "example");
 
     await page.goto(makeDeckUrl("example", "#/recap"));
@@ -64,7 +70,9 @@ test.describe("NAV-R1 the URL hash records the current slide", () => {
     await expectSlide(page, "Summary");
   });
 
-  test("clicking a link on a slide shows the slide it points to", async ({ page }) => {
+  test("NAV-R1.7 clicking a link on a slide shows the slide it points to", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
 
     await page.getByRole("link", { name: "Last page" }).click();
@@ -74,7 +82,9 @@ test.describe("NAV-R1 the URL hash records the current slide", () => {
 });
 
 test.describe("NAV-R2 a hash that points to no slide", () => {
-  test("opening an unknown slide shows the first slide and warns", async ({ page }) => {
+  test("NAV-R2.1 opening an unknown slide shows the first slide and warns", async ({
+    page,
+  }) => {
     const warnings = collectConsoleMessages(page, "warning");
 
     await page.goto(makeDeckUrl("example", "#/old-name"));
@@ -84,7 +94,9 @@ test.describe("NAV-R2 a hash that points to no slide", () => {
     await expect.poll(() => warnings.join("\n")).toContain("#/old-name");
   });
 
-  test("an unknown slide during playback keeps the current slide", async ({ page }) => {
+  test("NAV-R2.3 an unknown slide during playback keeps the current slide", async ({
+    page,
+  }) => {
     const warnings = collectConsoleMessages(page, "warning");
     await openDeck(page, "example");
     await page.keyboard.press("ArrowRight");
@@ -99,7 +111,7 @@ test.describe("NAV-R2 a hash that points to no slide", () => {
 });
 
 test.describe("NAV-R3 keys step through the slides", () => {
-  test("every next key moves to the next slide", async ({ page }) => {
+  test("NAV-R3.1 every next key moves to the next slide", async ({ page }) => {
     await openDeck(page, "example");
 
     for (const key of ["ArrowRight", "ArrowDown", "PageDown", "Space", "Enter"]) {
@@ -110,7 +122,7 @@ test.describe("NAV-R3 keys step through the slides", () => {
     }
   });
 
-  test("every previous key moves to the previous slide", async ({ page }) => {
+  test("NAV-R3.2 every previous key moves to the previous slide", async ({ page }) => {
     await openDeck(page, "example");
 
     for (const key of ["ArrowLeft", "ArrowUp", "PageUp", "Shift+Space", "Backspace"]) {
@@ -121,7 +133,7 @@ test.describe("NAV-R3 keys step through the slides", () => {
     }
   });
 
-  test("next on the last slide stays there", async ({ page }) => {
+  test("NAV-R3.3 next on the last slide stays there", async ({ page }) => {
     await openDeck(page, "example");
     await page.keyboard.press("End");
     await expectSlide(page, "Summary");
@@ -132,7 +144,7 @@ test.describe("NAV-R3 keys step through the slides", () => {
     await expect(page).toHaveURL(/#\/recap$/);
   });
 
-  test("previous on the first slide stays there", async ({ page }) => {
+  test("NAV-R3.4 previous on the first slide stays there", async ({ page }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("ArrowLeft");
@@ -143,7 +155,7 @@ test.describe("NAV-R3 keys step through the slides", () => {
 });
 
 test.describe("NAV-R4 Home and End jump to the first and last slides", () => {
-  test("Home jumps to the first slide", async ({ page }) => {
+  test("NAV-R4.1 Home jumps to the first slide", async ({ page }) => {
     await openDeck(page, "example");
     await page.keyboard.press("End");
     await expectSlide(page, "Summary");
@@ -153,7 +165,7 @@ test.describe("NAV-R4 Home and End jump to the first and last slides", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("End jumps to the last slide", async ({ page }) => {
+  test("NAV-R4.2 End jumps to the last slide", async ({ page }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("End");
@@ -163,7 +175,9 @@ test.describe("NAV-R4 Home and End jump to the first and last slides", () => {
 });
 
 test.describe("NAV-R5 typing a page number jumps to that slide", () => {
-  test("typing a page number and Enter jumps to that slide", async ({ page }) => {
+  test("NAV-R5.1 typing a page number and Enter jumps to that slide", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("3");
@@ -172,7 +186,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expectSlide(page, "Summary");
   });
 
-  test("a two-digit page number jumps to that slide", async ({ page }) => {
+  test("NAV-R5.2 a two-digit page number jumps to that slide", async ({ page }) => {
     await openDeck(page, "controls");
 
     await page.keyboard.press("1");
@@ -182,7 +196,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expectSlide(page, "Page 12");
   });
 
-  test("the page number shows above the fullscreen button while typing", async ({
+  test("NAV-R5.3 the page number shows above the fullscreen button while typing", async ({
     page,
   }) => {
     await openDeck(page, "controls");
@@ -200,7 +214,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     expect(pageNumberBox.y + pageNumberBox.height).toBeLessThanOrEqual(buttonBox.y);
   });
 
-  test("the page number disappears after 3 seconds without typing", async ({
+  test("NAV-R5.4 the page number disappears after 3 seconds without typing", async ({
     page,
   }) => {
     await installPausedClock(page);
@@ -213,7 +227,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expect(page.getByTestId("page-number")).toHaveCount(0);
   });
 
-  test("Enter after the page number times out moves to the next slide", async ({
+  test("NAV-R5.5 Enter after the page number times out moves to the next slide", async ({
     page,
   }) => {
     await installPausedClock(page);
@@ -228,7 +242,9 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expectSlide(page, "Agenda");
   });
 
-  test("Backspace deletes the last digit of the page number", async ({ page }) => {
+  test("NAV-R5.6 Backspace deletes the last digit of the page number", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("3");
@@ -239,7 +255,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expectSlide(page, "Summary");
   });
 
-  test("Backspace on an empty page number moves to the previous slide", async ({
+  test("NAV-R5.7 Backspace on an empty page number moves to the previous slide", async ({
     page,
   }) => {
     await openDeck(page, "example");
@@ -257,7 +273,9 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("another shortcut cancels the page number and runs", async ({ page }) => {
+  test("NAV-R5.8 another shortcut cancels the page number and runs", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("3");
@@ -270,7 +288,9 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
   test.describe("with touch", () => {
     test.use({ hasTouch: true });
 
-    test("a swipe cancels the page number and changes slides", async ({ page }) => {
+    test("NAV-R5.9 a swipe cancels the page number and changes slides", async ({
+      page,
+    }) => {
       await openDeck(page, "example");
 
       await page.keyboard.press("3");
@@ -282,7 +302,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     });
   });
 
-  test("a page number beyond the last slide stays put", async ({ page }) => {
+  test("NAV-R5.10 a page number beyond the last slide stays put", async ({ page }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("9");
@@ -292,7 +312,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expect(page.getByTestId("page-number")).toHaveCount(0);
   });
 
-  test("page number 0 stays put", async ({ page }) => {
+  test("NAV-R5.11 page number 0 stays put", async ({ page }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("0");
@@ -302,7 +322,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expect(page.getByTestId("page-number")).toHaveCount(0);
   });
 
-  test("numpad digits type the page number", async ({ page }) => {
+  test("NAV-R5.12 numpad digits type the page number", async ({ page }) => {
     await openDeck(page, "example");
 
     // Playwright's numpad behaves as if NumLock were off, sending PageDown for Numpad3
@@ -315,7 +335,7 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
 });
 
 test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
-  test("stepping through slides adds no history entries", async ({ page }) => {
+  test("NAV-R6.1 stepping through slides adds no history entries", async ({ page }) => {
     const homeUrl = makeFileUrl(path.join(E2E_OUTPUT, "index.html"));
     await page.goto(homeUrl);
     await page.getByRole("link", { name: "範例" }).click();
@@ -329,7 +349,7 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
     await expect(page).toHaveURL(homeUrl);
   });
 
-  test("stepping within a slide adds no history entries", async ({ page }) => {
+  test("NAV-R6.1 stepping within a slide adds no history entries", async ({ page }) => {
     const homeUrl = makeFileUrl(path.join(E2E_OUTPUT, "index.html"));
     await page.goto(homeUrl);
     await page.getByRole("link", { name: "分步" }).click();
@@ -343,7 +363,9 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
     await expect(page).toHaveURL(homeUrl);
   });
 
-  test("back after End returns to the slide before the jump", async ({ page }) => {
+  test("NAV-R6.2 back after End returns to the slide before the jump", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
     await page.keyboard.press("ArrowRight");
     await expectSlide(page, "Agenda");
@@ -355,7 +377,7 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
     await expectSlide(page, "Agenda");
   });
 
-  test("back after a page number jump returns to the slide before it", async ({
+  test("NAV-R6.3 back after a page number jump returns to the slide before it", async ({
     page,
   }) => {
     await openDeck(page, "example");
@@ -371,7 +393,7 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
     await expectSlide(page, "Summary");
   });
 
-  test("back after a jump and a step returns to the slide before the jump", async ({
+  test("NAV-R6.4 back after a jump and a step returns to the slide before the jump", async ({
     page,
   }) => {
     await openDeck(page, "example");
@@ -385,7 +407,7 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("back after a link returns to the step the link was clicked on", async ({
+  test("NAV-R6.6 back after a link returns to the step the link was clicked on", async ({
     page,
   }) => {
     await page.goto(makeDeckUrl("steps", "#/list/2"));
@@ -403,7 +425,9 @@ test.describe("NAV-R6 the browser's back button undoes the last jump", () => {
 });
 
 test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => {
-  test("Ctrl, Cmd, or Alt with a key does not trigger shortcuts", async ({ page }) => {
+  test("NAV-R7.1 Ctrl, Cmd, or Alt with a key does not trigger shortcuts", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
     await recordKeydownDefaultPrevented(page);
 
@@ -414,7 +438,7 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
     }
   });
 
-  test("a key the focused component prevents does not change slides", async ({
+  test("NAV-R7.2 a key the focused component prevents does not change slides", async ({
     page,
   }) => {
     await openDeck(page, "controls");
@@ -425,7 +449,9 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
     await expectSlide(page, "Widgets");
   });
 
-  test("arrow keys in a text field move the caret, not the slide", async ({ page }) => {
+  test("NAV-R7.3 arrow keys in a text field move the caret, not the slide", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
     await page.getByRole("textbox", { name: "Text" }).focus();
 
@@ -434,7 +460,9 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
     await expectSlide(page, "Widgets");
   });
 
-  test("typing B in a text field types b without a black screen", async ({ page }) => {
+  test("NAV-R7.4 typing B in a text field types b without a black screen", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
     const textField = page.getByRole("textbox", { name: "Text" });
     await textField.focus();
@@ -445,7 +473,9 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
     await expect(page.getByTestId("black-screen")).toHaveCount(0);
   });
 
-  test("PageDown from a presenter remote works in a text field", async ({ page }) => {
+  test("NAV-R7.5 PageDown from a presenter remote works in a text field", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
     await page.getByRole("textbox", { name: "Text" }).focus();
 
@@ -454,7 +484,7 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
     await expectSlide(page, "Counter");
   });
 
-  test("Space on a focused button presses the button", async ({ page }) => {
+  test("NAV-R7.6 Space on a focused button presses the button", async ({ page }) => {
     await openDeck(page, "controls");
     const button = page.getByRole("button", { name: "Pressed 0" });
     await button.focus();
@@ -465,7 +495,7 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
     await expectSlide(page, "Widgets");
   });
 
-  test("an arrow key on a focused button changes slides", async ({ page }) => {
+  test("NAV-R7.7 an arrow key on a focused button changes slides", async ({ page }) => {
     await openDeck(page, "controls");
     await page.getByRole("button", { name: "Pressed 0" }).focus();
 
@@ -474,7 +504,9 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
     await expectSlide(page, "Counter");
   });
 
-  test("Enter confirms a page number typed on a focused button", async ({ page }) => {
+  test("NAV-R7.8 Enter confirms a page number typed on a focused button", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
     await page.getByRole("button", { name: "Pressed 0" }).focus();
     await recordKeydownDefaultPrevented(page);
@@ -492,7 +524,7 @@ test.describe("NAV-R7 when shortcuts stay with the browser or the slide", () => 
 test.describe("NAV-R8 swiping changes slides", () => {
   test.use({ hasTouch: true });
 
-  test("a swipe to the left moves to the next slide", async ({ page }) => {
+  test("NAV-R8.1 a swipe to the left moves to the next slide", async ({ page }) => {
     await openDeck(page, "example");
 
     await swipe(page, { deltaX: -200 });
@@ -500,7 +532,9 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Agenda");
   });
 
-  test("a swipe to the right moves to the previous slide", async ({ page }) => {
+  test("NAV-R8.2 a swipe to the right moves to the previous slide", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
     await page.keyboard.press("ArrowRight");
     await expectSlide(page, "Agenda");
@@ -510,7 +544,9 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("a swipe shorter than 80px does not change slides", async ({ page }) => {
+  test("NAV-R8.3 a swipe shorter than 80px does not change slides", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
 
     await swipe(page, { deltaX: -60 });
@@ -518,7 +554,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("a diagonal swipe that moves more vertically does not change slides", async ({
+  test("NAV-R8.4 a diagonal swipe that moves more vertically does not change slides", async ({
     page,
   }) => {
     await openDeck(page, "example");
@@ -528,7 +564,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("a two-finger swipe does not change slides", async ({ page }) => {
+  test("NAV-R8.5 a two-finger swipe does not change slides", async ({ page }) => {
     await openDeck(page, "example");
 
     await swipe(page, { deltaX: -200, fingers: 2 });
@@ -536,7 +572,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("dragging with the mouse does not change slides", async ({ page }) => {
+  test("NAV-R8.6 dragging with the mouse does not change slides", async ({ page }) => {
     await openDeck(page, "example");
     const center = await getCenter(page.getByTestId("canvas"));
 
@@ -548,7 +584,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("a swipe that starts on a range input does not change slides", async ({
+  test("NAV-R8.7 a swipe that starts on a range input does not change slides", async ({
     page,
   }) => {
     await openDeck(page, "controls");
@@ -561,7 +597,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Widgets");
   });
 
-  test("a swipe that starts under touch-action: none does not change slides", async ({
+  test("NAV-R8.8 a swipe that starts under touch-action: none does not change slides", async ({
     page,
   }) => {
     await openDeck(page, "controls");
@@ -571,7 +607,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Widgets");
   });
 
-  test("a swipe whose pointerdown a component prevents does not change slides", async ({
+  test("NAV-R8.9 a swipe whose pointerdown a component prevents does not change slides", async ({
     page,
   }) => {
     await openDeck(page, "controls");
@@ -581,7 +617,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
     await expectSlide(page, "Widgets");
   });
 
-  test("a swipe whose touchmove a component prevents does not change slides", async ({
+  test("NAV-R8.10 a swipe whose touchmove a component prevents does not change slides", async ({
     page,
   }) => {
     await openDeck(page, "controls");
@@ -593,7 +629,7 @@ test.describe("NAV-R8 swiping changes slides", () => {
 });
 
 test.describe("NAV-R9 the black screen", () => {
-  test("B toggles the black screen", async ({ page }) => {
+  test("NAV-R9.1 B toggles the black screen", async ({ page }) => {
     await openDeck(page, "example");
     const blackScreen = page.getByTestId("black-screen");
 
@@ -605,7 +641,7 @@ test.describe("NAV-R9 the black screen", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("the period key toggles the black screen", async ({ page }) => {
+  test("NAV-R9.2 the period key toggles the black screen", async ({ page }) => {
     await openDeck(page, "example");
     const blackScreen = page.getByTestId("black-screen");
 
@@ -617,7 +653,9 @@ test.describe("NAV-R9 the black screen", () => {
     await expectSlide(page, "Intro");
   });
 
-  test("the black screen covers an element with a z-index", async ({ page }) => {
+  test("NAV-R9.3 the black screen covers an element with a z-index", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
     const center = await getCenter(page.getByTestId("z-index-layer"));
 
@@ -626,7 +664,7 @@ test.describe("NAV-R9 the black screen", () => {
     await expect.poll(() => getTestIdAt(page, center)).toBe("black-screen");
   });
 
-  test("a next key on the black screen only ends the black screen", async ({
+  test("NAV-R9.4 a next key on the black screen only ends the black screen", async ({
     page,
   }) => {
     await openDeck(page, "example");
@@ -642,7 +680,9 @@ test.describe("NAV-R9 the black screen", () => {
   test.describe("with touch", () => {
     test.use({ hasTouch: true });
 
-    test("a swipe on the black screen only ends the black screen", async ({ page }) => {
+    test("NAV-R9.5 a swipe on the black screen only ends the black screen", async ({
+      page,
+    }) => {
       await openDeck(page, "example");
       await page.keyboard.press("b");
       await expect(page.getByTestId("black-screen")).toBeVisible();
@@ -654,7 +694,7 @@ test.describe("NAV-R9 the black screen", () => {
     });
   });
 
-  test("F on the black screen enters fullscreen and keeps the black screen", async ({
+  test("NAV-R9.6 F on the black screen enters fullscreen and keeps the black screen", async ({
     page,
   }) => {
     await openDeck(page, "example");
@@ -667,7 +707,7 @@ test.describe("NAV-R9 the black screen", () => {
     await expect(page.getByTestId("black-screen")).toBeVisible();
   });
 
-  test("the browser's back button on the black screen changes slides underneath", async ({
+  test("NAV-R9.7 the browser's back button on the black screen changes slides underneath", async ({
     page,
   }) => {
     await openDeck(page, "example");
@@ -691,7 +731,7 @@ test.describe("NAV-R9 the black screen", () => {
 });
 
 test.describe("NAV-R10 fullscreen", () => {
-  test("F toggles fullscreen", async ({ page }) => {
+  test("NAV-R10.1 F toggles fullscreen", async ({ page }) => {
     await openDeck(page, "example");
 
     await page.keyboard.press("f");
@@ -701,7 +741,9 @@ test.describe("NAV-R10 fullscreen", () => {
     await expectFullscreen(page, false);
   });
 
-  test("F5 enters fullscreen without reloading the page", async ({ page }) => {
+  test("NAV-R10.2 F5 enters fullscreen without reloading the page", async ({
+    page,
+  }) => {
     await openDeck(page, "example");
     await page.keyboard.press("ArrowRight");
     await expectSlide(page, "Agenda");
@@ -716,7 +758,7 @@ test.describe("NAV-R10 fullscreen", () => {
     await expectLastKeydownDefaultPrevented(page, true);
   });
 
-  test("F5 in fullscreen stays in fullscreen", async ({ page }) => {
+  test("NAV-R10.3 F5 in fullscreen stays in fullscreen", async ({ page }) => {
     await openDeck(page, "example");
     await page.keyboard.press("f");
     await expectFullscreen(page, true);
@@ -728,7 +770,9 @@ test.describe("NAV-R10 fullscreen", () => {
 });
 
 test.describe("NAV-R11 the fullscreen button", () => {
-  test("opening the deck shows the button for 2 seconds", async ({ page }) => {
+  test("NAV-R11.1 opening the deck shows the button for 2 seconds", async ({
+    page,
+  }) => {
     await installPausedClock(page);
     await openDeck(page, "example");
     await expectFullscreenButtonShown(page, true);
@@ -738,7 +782,7 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreenButtonShown(page, false);
   });
 
-  test("moving the mouse shows the button", async ({ page }) => {
+  test("NAV-R11.2 moving the mouse shows the button", async ({ page }) => {
     await installPausedClock(page);
     await openDeck(page, "example");
     await page.clock.runFor(2000);
@@ -749,7 +793,7 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreenButtonShown(page, true);
   });
 
-  test("the button hides after 2 seconds without input", async ({ page }) => {
+  test("NAV-R11.3 the button hides after 2 seconds without input", async ({ page }) => {
     await installPausedClock(page);
     await openDeck(page, "example");
     await page.mouse.move(200, 200);
@@ -760,7 +804,7 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreenButtonShown(page, false);
   });
 
-  test("clicking the button toggles fullscreen", async ({ page }) => {
+  test("NAV-R11.4 clicking the button toggles fullscreen", async ({ page }) => {
     await openDeck(page, "example");
     await page.mouse.move(200, 200);
 
@@ -771,7 +815,7 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreen(page, false);
   });
 
-  test("Space after clicking the button changes slides", async ({ page }) => {
+  test("NAV-R11.5 Space after clicking the button changes slides", async ({ page }) => {
     await openDeck(page, "example");
     await page.mouse.move(200, 200);
 
@@ -783,7 +827,7 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreen(page, true);
   });
 
-  test("Tab focuses the button, which stays shown and takes Space", async ({
+  test("NAV-R11.6 Tab focuses the button, which stays shown and takes Space", async ({
     page,
     browserName,
   }) => {
@@ -806,7 +850,7 @@ test.describe("NAV-R11 the fullscreen button", () => {
   test.describe("with touch", () => {
     test.use({ hasTouch: true });
 
-    test("tapping the screen shows the button", async ({ page }) => {
+    test("NAV-R11.7 tapping the screen shows the button", async ({ page }) => {
       await installPausedClock(page);
       await openDeck(page, "example");
       await page.clock.runFor(2000);
@@ -822,7 +866,9 @@ test.describe("NAV-R11 the fullscreen button", () => {
 });
 
 test.describe("NAV-R12 the cursor hides when the mouse is idle", () => {
-  test("the cursor hides after the mouse stops for 2 seconds", async ({ page }) => {
+  test("NAV-R12.1 the cursor hides after the mouse stops for 2 seconds", async ({
+    page,
+  }) => {
     await installPausedClock(page);
     await openDeck(page, "example");
     const player = page.getByTestId("player");
@@ -834,7 +880,7 @@ test.describe("NAV-R12 the cursor hides when the mouse is idle", () => {
     await expect(player).toHaveCSS("cursor", "none");
   });
 
-  test("moving the mouse shows the hidden cursor", async ({ page }) => {
+  test("NAV-R12.2 moving the mouse shows the hidden cursor", async ({ page }) => {
     await installPausedClock(page);
     await openDeck(page, "example");
     const player = page.getByTestId("player");
@@ -849,7 +895,9 @@ test.describe("NAV-R12 the cursor hides when the mouse is idle", () => {
 });
 
 test.describe("NAV-R13 leaving a slide resets it", () => {
-  test("returning to a slide shows it in its initial state", async ({ page }) => {
+  test("NAV-R13.1 returning to a slide shows it in its initial state", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
     await page.keyboard.press("ArrowRight");
     await expectSlide(page, "Counter");
@@ -862,7 +910,9 @@ test.describe("NAV-R13 leaving a slide resets it", () => {
     await expect(page.getByRole("button", { name: "Count: 0" })).toBeVisible();
   });
 
-  test("a slide that re-exports the previous slide starts over", async ({ page }) => {
+  test("NAV-R13.2 a slide that re-exports the previous slide starts over", async ({
+    page,
+  }) => {
     await openDeck(page, "controls");
     await page.keyboard.press("ArrowRight");
     await expectSlide(page, "Counter");
@@ -876,7 +926,7 @@ test.describe("NAV-R13 leaving a slide resets it", () => {
 });
 
 test.describe("NAV-R14 holding a key down", () => {
-  test("holding the right arrow keeps moving forward", async ({ page }) => {
+  test("NAV-R14.1 holding the right arrow keeps moving forward", async ({ page }) => {
     await openDeck(page, "example");
 
     await holdKey(page, "ArrowRight", 1);
@@ -884,7 +934,7 @@ test.describe("NAV-R14 holding a key down", () => {
     await expectSlide(page, "Summary");
   });
 
-  test("holding B toggles the black screen once", async ({ page }) => {
+  test("NAV-R14.2 holding B toggles the black screen once", async ({ page }) => {
     await openDeck(page, "example");
 
     await holdKey(page, "b", 3);
@@ -892,7 +942,7 @@ test.describe("NAV-R14 holding a key down", () => {
     await expect(page.getByTestId("black-screen")).toBeVisible();
   });
 
-  test("holding F toggles fullscreen once", async ({ page }) => {
+  test("NAV-R14.3 holding F toggles fullscreen once", async ({ page }) => {
     await openDeck(page, "example");
 
     // Waits for fullscreen before the repeat, since a repeat that arrives earlier finds

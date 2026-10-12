@@ -60,7 +60,12 @@ export default defineConfig(
   },
 
   {
-    files: ["src/build/**", "tests/{unit,integration,e2e}/**", "*.config.{js,ts}"],
+    files: [
+      "src/build/**",
+      "scripts/**",
+      "tests/{unit,integration,e2e}/**",
+      "*.config.{js,ts}",
+    ],
     languageOptions: { globals: globals.node },
   },
 

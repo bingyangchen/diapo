@@ -38,7 +38,7 @@ Your responses must be authoritative, highly precise, and completely free of fil
 
 - Write code, identifiers, and code comments in English.
 - Write the README and agent skills in English.
-- Specs, plans, the roadmap, and PR descriptions follow the language rules in the `sdd` skill.
+- Specs, plans, the roadmap, PR descriptions, and the manual checks in `tests/manual/` follow the language rules in the `sdd` skill.
 
 ## Spec-Driven Development
 
