@@ -1,5 +1,11 @@
 import slidetray from "../assets/slidetray.svg";
 
+export const notes = `
+這裡是講者備註，用 Markdown 寫在每一頁的 TSX 檔裡，只有講者視窗看得到。
+
+先介紹 diapo 的定位：簡報是程式碼，播放只需要瀏覽器。
+`;
+
 export default function Cover() {
   return (
     <div className="flex h-full items-center justify-center gap-32 bg-slate-50">

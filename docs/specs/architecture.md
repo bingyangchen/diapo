@@ -54,6 +54,13 @@
 - 全螢幕時，headless 的 Chromium 收到 Esc 不會離開全螢幕。
 - E2E test 只能送出模擬的 touch 與 pointer 事件，這些事件不會經過瀏覽器處理手勢的流程，所以真實手勢的行為要在觸控裝置上手動檢查。
 - 全螢幕時用瀏覽器的上一頁回到同一份文件的另一個 hash，headless 的 Chromium、Firefox、WebKit 都維持全螢幕。
+- 在 Playwright 裡按 Cmd+R 或 Ctrl+R 也不會重新載入網頁。
+- Playwright 預設關掉 Chromium 與 Firefox 的彈出視窗攔截，`playwright.config.ts` 把這兩個瀏覽器的攔截都打開，E2E test 裡的瀏覽器才會和真正的瀏覽器一樣，擋下沒有使用者操作就開啟的視窗。打開攔截之後，網頁在 keydown 事件裡用 `window.open` 開視窗，三個瀏覽器都不會擋下。Playwright 的 WebKit 不論怎麼設定都不會擋下彈出視窗，所以真正的 Safari 會不會擋下講者視窗，要手動檢查。
+- Playwright 的每個 page 都在前景，`document.visibilityState` 一直是 `visible`，在同一個 browser context 開了新的分頁也一樣，所以 E2E test 改寫 `document.visibilityState` 並送出 `visibilitychange`，模擬觀眾視窗的分頁不在前景。
+- 網頁呼叫另一個視窗的 `focus()` 時，headless 的 Chromium 與 WebKit 不會在那個視窗觸發 `focus` 事件，只有 Firefox 會，所以 E2E test 看不出視窗有沒有移到最前面，只能從同源的網頁改寫那個視窗的 `window.focus`，確認播放器呼叫了它。
+- Firefox 只讓有焦點的視窗進入全螢幕，所以 E2E test 在沒有焦點的視窗按全螢幕的快捷鍵之前，先呼叫那個視窗的 `page.bringToFront()`。
+- 在 macOS 上，兩個 WebKit process 同時讓彈出視窗進入全螢幕時，WebKit 會 crash；browser context 裡的彈出視窗還在全螢幕時，關閉這個 browser context 也會花掉大部分的 test timeout。所以讓講者視窗進入全螢幕的 E2E test 放在同一個 serial 的 `test.describe` 裡依序執行，每個 test 結束時也先離開全螢幕。
+- `page.clock` 作用在整個 browser context，彈出視窗也用同一個時鐘；網頁重新整理之後，時鐘從重新整理前的時間接著計算。
 
 ## 模組劃分
 
@@ -104,6 +111,7 @@
 - `src/build/plugins.ts` 的 Vite plugin 提供兩個 virtual module：`virtual:deck` 依 `deck.json` 的順序匯入一份簡報的每一頁，`virtual:site` 提供網站首頁要列出的 deck ID 與標題。
 - `src/framework/` 是頁面 import 的元件與 hook，例如 `Step` 與 `useStep`。
 - `src/player/` 是 Vite 的入口 HTML 與播放器。
+- `src/player/presenter/` 是講者模式，包括觀眾視窗與講者視窗之間的連線，以及講者視窗的畫面。
 - `src/site/` 是網站首頁的入口 HTML 與 React 元件。
 
 > 設計理由：網站首頁用 React 與 Vite build，因為 roadmap 的「網站首頁」要沿用簡報的主題，首頁之後一定要經過 Vite build；曾考慮由 build script 直接產生靜態 HTML。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
@@ -118,7 +126,7 @@
 
 ### 播放器的狀態
 
-播放器把目前的頁面與步驟記錄在網址的 hash（NAV-R1、STEP-R11），黑畫面與輸入中的頁碼只存在記憶體，播放器不使用 `localStorage`。
+播放器把目前的頁面與步驟記錄在網址的 hash（NAV-R1、STEP-R11），黑畫面與輸入中的頁碼只存在記憶體。講者模式的經過時間開始計時的時刻（PRES-R9），以及觀眾視窗替講者視窗取的視窗名稱，存在觀眾視窗的 `sessionStorage`，因為 `sessionStorage` 每個分頁各自一份，重新整理之後仍然保留。網站上的簡報屬於同一個 origin，共用同一份 `sessionStorage`，所以經過時間以 deck ID 區分。瀏覽器拒絕存取 `sessionStorage` 時，例如講者封鎖了所有 cookie，播放器照常播放，只是經過時間與視窗名稱在重新整理之後不會保留。播放器不使用 `localStorage`，因為 `localStorage` 在 Chromium 與 WebKit 由所有 `file://` 網頁共用（見「從 `file://` 開啟 Slidetray」）。
 
 播放器用 React context 把目前的步驟交給 `Step` 與 `useStep`，`Step` 與 `useStep` 也透過同一個 context 向播放器登記步驟。頁面只透過這個 context 讀出目前的步驟，所以任何 render 頁面的元件都能提供這個 context，指定頁面顯示哪一步，不必修改頁面。
 
@@ -141,6 +149,75 @@ sequenceDiagram
 
 > 設計理由：校正前的那次 render，`useStep` 最多只回傳自己參數裡的最大值，因為元件只在參數列出的步驟有變化（STEP-R4），在大於最大值的步驟畫出的內容和在最大值那一步相同，而且元件讀到的步驟不會超過自己寫過的步驟。曾考慮直接把要求的步驟交給頁面，但往回換頁時，播放器在 render 之前不知道最後一步是第幾步，只能用 `Infinity` 表示，hash 也可能寫了極大的數字；頁面寫了 `Array.from({ length: step })` 這類程式碼時，這兩種值都會讓它丟出 `RangeError`，而播放器沒有 error boundary，所以整個畫面會變成空白。完整討論見 [0003](../plans/archive/0003-steps.md)。
 
+### 講者視窗
+
+講者視窗載入同一份 slidetray 的 `index.html`，網址加上 `?presenter`；網址帶有這段 query string 時，`src/player/main.tsx` render 講者視窗，所以 slidetray 仍然只有一個 JS 檔與一個入口 HTML。講者視窗載入時沒有 `window.opener`，或 `window.opener` 已經關閉時，只顯示提示（PRES-R14）。兩個視窗用 `window.open` 與 `postMessage` 通訊，觀眾視窗是目前位置的 source of truth：換頁、步驟的校正與瀏覽紀錄都只在觀眾視窗執行，講者視窗把快捷鍵轉成指令送給觀眾視窗，再顯示觀眾視窗傳回的狀態，不讀取也不改寫網址的 hash。
+
+```mermaid
+sequenceDiagram
+  participant presenter as 講者視窗
+  participant audience as 觀眾視窗
+  presenter->>audience: 載入後每 100 毫秒送出連線請求，附上 deck ID 與 build ID，直到觀眾視窗回覆
+  audience->>presenter: 回覆目前的狀態：頁面、步驟、步數、黑畫面、分頁在不在前景、經過時間開始計時的時刻、deck ID 與 build ID
+  Note over presenter: 講者按 →
+  presenter->>audience: 下一步
+  Note over audience: 照 STEP-R9 前進一步，改寫 hash
+  audience->>presenter: 送出目前的狀態
+  Note over audience: 重新整理
+  audience->>presenter: 離開的通知（pagehide）
+  Note over presenter: 顯示「連線中斷」
+  presenter->>audience: 每 100 毫秒送出連線請求，直到觀眾視窗回覆
+  audience->>presenter: 重新載入的網頁回覆目前的狀態
+```
+
+> 設計理由：目前的位置以觀眾視窗為準。曾考慮讓兩個視窗對等，各自有 hash 與瀏覽紀錄，任一邊換頁時另一邊照做一次，但這樣要另外規定 NAV-R6 的瀏覽紀錄在兩個視窗之間怎麼對應，以及兩邊幾乎同時換頁時以哪一邊為準；而且往回換頁時，兩個視窗各自 render 上一頁、各自算出最後一步，講者在觀眾視窗操作過互動元件時（STEP-R14），兩邊可能停在不同的步驟。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
+
+連線請求一律由講者視窗送出，因為觀眾視窗沒辦法在載入時用 `window.open('', name)` 找講者視窗：講者視窗不存在時，Chromium 與 Firefox 會擋下這個彈出視窗，沒擋的瀏覽器則會多開一個空白視窗。連線時兩個視窗比對 deck ID 與 build ID，deck ID 不同時，講者視窗關掉自己（PRES-R13）；build ID 不同時，講者視窗照 PRES-R12 顯示版本不同的提示。`diapo:deck` plugin 每次 build 與每次啟動 dev server 時都產生新的 build ID，寫進 `virtual:deck`。
+
+連線另有以下規則：
+
+- 觀眾視窗與講者視窗重新整理、關閉或離開網頁時，都在 `pagehide` 送出離開的通知。另一個視窗收到這種在網頁卸載時送出的訊息時，`event.source` 可能是 `null`，在 headless 的 Chromium、Firefox、WebKit 都出現過這種情況，所以兩個視窗收到來源是 `null` 的離開通知時，也當成另一個視窗離開。
+- 觀眾視窗送出離開的通知之後就不再回覆連線請求，因為正在卸載的網頁仍然收得到訊息，會回覆講者視窗收到通知後立刻送出的連線請求，講者視窗收到這個回覆，就會把連線當成沒有中斷。網頁從 back-forward cache 還原時，觀眾視窗再恢復回覆。
+- 講者視窗每 200 毫秒檢查 `window.opener`，變成 `null` 或已經關閉時，講者視窗用 `window.close()` 關掉自己（PRES-R13）。
+
+講者在觀眾視窗按 `S` 時，觀眾視窗照下圖決定把哪個視窗當成講者視窗（PRES-R1）。觀眾視窗替講者視窗取的視窗名稱存在 `sessionStorage`，每個分頁各自一個（PRES-R15），所以觀眾視窗重新整理之後，還沒收到講者視窗的連線請求時，也能用這個名稱找到原本的講者視窗（PRES-R1.3）。
+
+```mermaid
+flowchart TD
+  press("講者在觀眾視窗按 S") --> known{"觀眾視窗開過講者視窗，或收過連線請求，<br/>而且那個講者視窗還沒關閉？"}
+  known -- 是 --> front("把講者視窗移到最前面")
+  known -- 否 --> lookup("用 window.open('', name) 找同名的視窗")
+  lookup --> blank{"找到的是新開的空白視窗？"}
+  blank -- 是 --> navigate("把空白視窗導向講者視窗的網址")
+  navigate --> front
+  blank -- 否 --> opener{"那個視窗的 window.opener 是這個觀眾視窗？"}
+  opener -- 是 --> front
+  opener -- 否 --> rename("換一個新的視窗名稱，用 window.open(url, name) 開啟講者視窗")
+  rename --> front
+```
+
+找到的視窗的 `window.opener` 不是這個觀眾視窗時，找到的視窗可能是瀏覽器還原的講者視窗（PRES-R14），也可能是原分頁的講者視窗，因為講者複製分頁時，瀏覽器一併複製了 `sessionStorage` 裡的視窗名稱（PRES-R15）。
+
+從觀眾視窗開啟的講者視窗和觀眾視窗共用同一個 event loop。從 `http://` 開啟時，兩個視窗同源，HTML 規範要求同源的網頁共用 event loop；從 `file://` 開啟時，兩個視窗的 origin 不同，實測的結果也一樣：在 headless 的 Chromium、Firefox、WebKit，不論從 `file://` 還是 `http://` 開啟，觀眾視窗連續執行 3 秒的 JS 時，講者視窗的計時器一次都沒有觸發，所以講者視窗 render 頁面的時間也會讓觀眾視窗的換頁變慢。兩個視窗既然在同一個執行緒上執行，觀眾視窗所在的 process crash 時，講者視窗也一起 crash：在 Chromium 用 DevTools protocol 的 `Page.crash`、在 Firefox 開啟 `about:crashcontent` 實測都是這樣，WebKit 沒有從 Playwright 讓分頁 crash 的方式，沒有實測。
+
+> 設計理由：講者視窗不會定時確認觀眾視窗有沒有回應。曾考慮讓講者視窗每秒向觀眾視窗送出確認，超過 2 秒沒有收到回覆就當成連線中斷，但觀眾視窗卡住或 crash 時，講者視窗自己也跟著停住或 crash，沒辦法顯示連線中斷。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
+
+講者視窗另外 render 目前頁、下一步與下一頁，其中目前頁與下一步是同一頁的兩份，所以目前這一頁的 effect 會在講者視窗再執行兩次，下一頁的 effect 也會在觀眾視窗換到下一頁之前，就先在講者視窗執行，所以講者視窗裡的影片聲音與圖表動畫，留給之後「圖片與影片」與「ECharts 圖表」的 plan 處理。講者視窗替這三份頁面各自提供步驟的 context，指定要顯示哪一步，但不記錄頁面登記的步驟，因為步數以觀眾視窗傳回的為準。這三份頁面放在 `inert` 的元素裡，所以講者點不到，裡面的元素也不會取得焦點；講者視窗在 render 任何頁面之前，就在 window 的 capture 階段攔下所有 keydown、keyup 與 keypress，處理完之後停止傳遞，所以講者視窗裡的頁面收不到鍵盤事件（PRES-R6）。資訊列的時鐘與經過時間各自在自己的元件裡每 200 毫秒更新，講者視窗的其他部分，包括三份頁面，不會跟著重新 render。
+
+### 講者備註
+
+`virtual:deck` 用 namespace import 匯入每一頁，讀出頁面匯出的 `notes`，所以講者在 `make dev` 執行時替頁面加上 `notes`，`virtual:deck` 的內容不會改變。講者視窗播放時用 `mdast-util-from-markdown` 把備註解析成 Markdown 的語法樹，再由播放器自己把語法樹 render 成 React 元素：HTML 照原文當成文字顯示，圖片改成替代文字，`#/` 開頭的連結 render 成不帶 `href` 的元素，其他連結顯示文字與網址（PRES-R10）。`mdast-util-from-markdown` 底層是 micromark，通過 CommonMark 全部的規範測試。
+
+> 設計理由：播放器在播放時才把備註 render 成 React 元素。曾考慮在 build 時從 TSX 檔抽出 `notes` 轉成 HTML，再從頁面的模組拿掉這個匯出，由 `virtual:deck` 提供轉好的 HTML，但這樣 Vite plugin 要改寫頁面的程式碼，還要自己解析 `export { default, notes } from "./agenda"` 這種從其他檔案重新匯出的備註；而且改備註時 `virtual:deck` 跟著改變，`make dev` 和現在一樣會整頁重新載入，只有修改頁面、沒改備註時才能熱更新。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
+
+### 選擇備註的 Markdown Library
+
+> 設計理由：用 `mdast-util-from-markdown` 解析備註，因為播放器要自己決定每種 node 怎麼顯示，而語法樹 render 成 React 元素時，不必用 `dangerouslySetInnerHTML`，打包後也只增加約 40 KB（minified）。曾考慮 `markdown-it` 的 `commonmark` preset，但它輸出 HTML 字串，要套用 PRES-R10 的規則得改寫它的 renderer，而且打包後約 100 KB，多出來的是 `entities`、`punycode` 與 `linkify-it`。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
+
+### Build 時檢查備註
+
+`diapo:deck` plugin 在 transform hook 用 Vite 的 `parseSync`（oxc parser）解析 `slides/` 裡的每個 TSX 檔，`notes` 不符合 FRAME-R7 時丟出 `BuildError`；重新匯出的 `notes` 指向哪個檔案，plugin 用 Vite 的 `this.resolve` 解析。Vite 的 bundler Rolldown 只 transform 沿著 `virtual:deck` 的 import 關係找得到的檔案，所以檢查的範圍和 FRAME-R5 打包進 slidetray 的範圍相同。Rolldown 用檔案的實際路徑命名模組，所以 plugin 比對 `slides/` 目錄時也用實際路徑，從 symlink 連到的簡報目錄一樣會檢查。Rolldown 把 plugin 丟出的錯誤包在另一個錯誤裡，`src/build/dist.ts` 再把 `BuildError` 取出來，讓 build 只印出錯誤訊息，不印 stack trace。
+
 ## 資料流
 
 本機 build 與部署用的 build 共用下圖的流程。
@@ -155,7 +232,9 @@ flowchart TD
   filter --> size
   size -- 是 --> fail
   size -- 否 --> vite("每份簡報各跑一次 Vite build，輸出 IIFE")
-  vite --> rewrite("改寫 HTML 的 script 與 link 標籤")
+  vite --> notes{"打包進 slidetray 的頁面，<br/>notes 都符合 FRAME-R7？"}
+  notes -- 否 --> fail
+  notes -- 是 --> rewrite("改寫 HTML 的 script 與 link 標籤")
   rewrite --> index("用 Vite build 網站首頁 dist/index.html")
   index --> deploy2{"部署用的 build？"}
   deploy2 -- 是 --> total("網站超過 800 MiB 時顯示警告")
@@ -191,6 +270,12 @@ flowchart TD
 - `localStorage` 在 Chromium 與 WebKit 由所有 `file://` 網頁共用，在 Firefox 則每個檔案路徑各自有一份。
 - 兩個視窗之間用 `window.open` 加 `postMessage` 可以通訊，`BroadcastChannel` 在 WebKit 收不到訊息。
 - 只改 hash 時，`location.hash =`、`location.replace()`、`history.pushState()` 與 `history.replaceState()` 都可以使用。
+- 任一個視窗重新整理之後，用 `window.open` 開啟的兩個視窗仍然能用 `postMessage` 通訊。講者視窗重新整理之後，`window.opener` 仍然指向觀眾視窗；觀眾視窗重新整理之後，可以用講者視窗送來的訊息的 `event.source` 回覆。
+- 觀眾視窗關閉之後，講者視窗的 `window.opener` 變成 `null`。任一個視窗關閉或重新整理時，在 `pagehide` 送出的訊息都來得及送到另一個視窗。
+- 觀眾視窗用 `window.open('', name)` 可以取得同名的講者視窗，講者視窗不會重新載入；觀眾視窗重新整理之後也一樣。
+- `file://` 的網址可以帶 query string，`location.search` 讀得到。
+- 觀眾視窗在全螢幕時開啟新視窗，Chromium、Firefox、WebKit 都會讓觀眾視窗離開全螢幕；把既有的視窗移到最前面時，Chromium 與 Firefox 會讓觀眾視窗離開全螢幕，WebKit 不會。這是 Playwright 在 headless 模式下的結果（PRES-R1）。
+- 觀眾視窗把畫面直接 render 進 `about:blank` 的彈出視窗時，任一邊重新整理之後，觀眾視窗就存取不到彈出視窗，或彈出視窗的內容消失，所以講者視窗要自己載入 `index.html`。
 
 `make dev` 用 Vite 的 dev server 透過 HTTP 載入 ES module，載入方式和 build 出來的檔案不同，所以 E2E test 一律測 build 出來的檔案。Playwright 內建的 Firefox 預設把 `security.fileuri.strict_origin_policy` 設成 `false`，和正式版的 Firefox 相反，所以 `playwright.config.ts` 把這個設定改回 `true`。
 

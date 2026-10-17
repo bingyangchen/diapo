@@ -5,7 +5,14 @@ const SHORTCUTS: [string, string][] = [
   ["跳到第 n 頁", "輸入 n，再按 Enter"],
   ["黑畫面", "B 或 ."],
   ["全螢幕", "F、F5，或右下角的按鈕"],
+  ["講者視窗", "S"],
 ];
+
+export const notes = `
+- 翻頁器的按鍵和鍵盤相同，**不用另外設定**
+- 講者視窗裡也能用這些快捷鍵，兩個視窗會一起換頁
+- 按 \`S\` 開啟的就是現在這個講者視窗
+`;
 
 export default function Shortcuts() {
   return (

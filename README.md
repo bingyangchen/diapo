@@ -107,6 +107,17 @@ export default function Agenda() {
 
 Space items with `gap`, not `space-y-*`, which skips items inside a `Step`. The full rules are in `docs/specs/steps.md`.
 
+Speaker notes are a Markdown string exported as `notes`, which the presenter window shows. Write them as a template literal, escaping backticks as `` \` ``, `${` as `\${`, and every backslash as `\\`. The build fails on notes that break these rules and names the file and the fix:
+
+```tsx
+export const notes = `
+- Ask who has used Keynote
+- Stress that \`useStep\` lists every step
+`;
+```
+
+A slide that re-exports another one leaves out its notes unless it lists them: `export { default, notes } from "./agenda";`. Notes ship in the slidetray, so anyone who opens a published deck can read them. The full rules are in `docs/specs/framework.md`.
+
 ## Playing a Deck
 
 - **Online:** open the deck from <https://bingyangchen.github.io/diapo/>.
@@ -123,8 +134,18 @@ While a deck plays, the URL hash names the current slide and step (`#/intro`, or
 | Go to slide _n_ | Type _n_, then Enter |
 | Black screen | B or . |
 | Fullscreen | F, F5, or the button in the bottom-right corner |
+| Presenter window | S |
 
 After Home, End, or a typed slide number, the browser's back button returns to the slide and step you jumped from.
+
+### Presenter Mode
+
+Press S in the window that plays the deck to open the presenter window, which shows the current slide, the next step, the next slide, the speaker notes, the elapsed time, and the time of day. Keys and the presenter remote work in either window, and both windows follow the same slide; after either window reloads, they reconnect on their own.
+
+1. Connect the projector and set the displays to extend the desktop, not to mirror it. On macOS, keep "Displays have separate Spaces" on in System Settings > Desktop & Dock, or a window going fullscreen on one display blacks out the other.
+2. Press S, then drag the deck window to the projector and press F there. The presenter window stays on your laptop.
+
+If the deck window is already on the projector when you press S, for example after closing the presenter window by mistake, the presenter window opens on the projector too; drag it back to your laptop. S does nothing while the deck window is in fullscreen, so press Esc first. The full rules are in `docs/specs/presenter.md`.
 
 ## Deployment
 

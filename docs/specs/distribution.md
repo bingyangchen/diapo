@@ -19,7 +19,7 @@ Build 時，`decks/` 底下的每份簡報各自產生一個 slidetray，播放�
 
 ### DIST-R2 直接開啟檔案就能播放
 
-用瀏覽器直接開啟 slidetray 裡的 `index.html`（`file://` URL）時，畫面顯示簡報設定檔 `deck.json` 裡頁面順序的第一頁，樣式與圖片都已載入。
+用瀏覽器直接開啟 slidetray 裡的 `index.html`（`file://` URL），而且網址不帶 `?presenter` 時，畫面顯示簡報設定檔 `deck.json` 裡頁面順序的第一頁，樣式與圖片都已載入。網址帶 `?presenter` 時的行為寫在 [presenter.md](presenter.md) 的 PRES-R14。
 
 - DIST-R2.1 在 Chromium 開啟
   - 前提：簡報已經 build 好
