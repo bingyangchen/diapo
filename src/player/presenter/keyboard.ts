@@ -23,7 +23,6 @@ export function captureKeys(): void {
   }
 }
 
-/** Handles the keydown events that `captureKeys` captures. */
 export function useCapturedKeyDown(onKeyDown: (event: KeyboardEvent) => void): void {
   const handleKeyDown = useEffectEvent(onKeyDown);
   useEffect(() => {

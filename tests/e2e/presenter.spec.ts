@@ -2240,7 +2240,6 @@ async function openDeckAt(page: Page, deckId: string, hash: string): Promise<voi
   await expect.poll(() => new URL(page.url()).hash).toBe(hash);
 }
 
-/** Opens a deck from the static server, at its first slide. */
 async function openServedDeck(
   page: Page,
   staticServerUrl: string,
@@ -2278,7 +2277,6 @@ function makePresenterUrl(deckId: string): string {
   return `${makeFileUrl(path.join(E2E_OUTPUT, deckId, "index.html"))}?presenter`;
 }
 
-/** Collects the windows that open from now on in the page's browser context. */
 function collectNewWindows(page: Page): Page[] {
   const newWindows: Page[] = [];
   page.context().on("page", (newWindow) => newWindows.push(newWindow));

@@ -24,7 +24,6 @@ export type AudienceState = DeckBuild &
     elapsedStartTime: number | null;
   };
 
-/** What the presenter window asks the audience window to do (PRES-R3, PRES-R9, PRES-R10). */
 export type PresenterCommand =
   | { type: "next" }
   | { type: "previous" }

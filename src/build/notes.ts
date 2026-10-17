@@ -117,7 +117,6 @@ export async function checkNotes(
   }
 }
 
-/** Whether a module exports `notes`, directly or through re-exports. */
 async function hasNotesExport(
   filePath: string,
   resolveModule: ResolveModule,
@@ -244,7 +243,6 @@ function checkEscapes(
   throw makeError(position, `"notes" contains ${shown}; ${fixes[problem.kind]}`);
 }
 
-/** Finds the first escape that FRAME-R7 does not allow in the text between the quotes. */
 function findEscapeProblem(body: string, quote: Quote): EscapeProblem | null {
   for (let index = 0; index < body.length; index++) {
     if (body[index] !== "\\") continue;
@@ -281,7 +279,6 @@ function parseModule(filePath: string, code: string): ESTree.Program {
   return parseSync(filePath, code, { lang }).program;
 }
 
-/** The names that an `export` statement with a declaration or an export list exports. */
 function getExportedNames(statement: ESTree.ExportNamedDeclaration): string[] {
   const declaredNames =
     statement.declaration === null ? [] : getDeclaredNames(statement.declaration);
@@ -353,7 +350,6 @@ function getExportName(name: ESTree.ModuleExportName): string {
   return name.type === "Literal" ? name.value : name.name;
 }
 
-/** Whether a file is a slide file of the deck, whose notes FRAME-R7 checks. */
 export function isSlideFile(filePath: string, slidesDirectory: string): boolean {
   return (
     path.dirname(filePath) === slidesDirectory && path.extname(filePath) === ".tsx"

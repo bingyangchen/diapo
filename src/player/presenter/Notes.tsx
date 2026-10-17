@@ -82,7 +82,6 @@ function renderNode(node: RootContent, key: number, context: RenderContext): Rea
         </li>
       );
     case "code":
-      // Scrolls sideways when a line is wider than the notes (PRES-R3).
       return (
         <pre
           key={key}
@@ -92,7 +91,6 @@ function renderNode(node: RootContent, key: number, context: RenderContext): Rea
         </pre>
       );
     case "html":
-      // HTML in the notes shows as written (PRES-R10).
       return (
         <span key={key} className="whitespace-pre-wrap">
           {node.value}

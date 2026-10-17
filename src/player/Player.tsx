@@ -169,7 +169,6 @@ export function Player({ deck }: { deck: Deck }) {
     }
   }
 
-  /** Runs a command from the presenter window by the audience window's rules (PRES-R3). */
   function runPresenterCommand(command: PlayerCommand): void {
     // The presenter window decides by the black screen it last heard of, which this window
     // may have changed since.
