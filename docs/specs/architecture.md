@@ -61,6 +61,7 @@
 - Firefox 只讓有焦點的視窗進入全螢幕，所以 E2E test 在沒有焦點的視窗按全螢幕的快捷鍵之前，先呼叫那個視窗的 `page.bringToFront()`。
 - 在 macOS 上，兩個 WebKit process 同時讓彈出視窗進入全螢幕時，WebKit 會 crash；browser context 裡的彈出視窗還在全螢幕時，關閉這個 browser context 也會花掉大部分的 test timeout。所以讓講者視窗進入全螢幕的 E2E test 放在同一個 serial 的 `test.describe` 裡依序執行，每個 test 結束時也先離開全螢幕。
 - `page.clock` 作用在整個 browser context，彈出視窗也用同一個時鐘；網頁重新整理之後，時鐘從重新整理前的時間接著計算。
+- Chromium 的上一頁按鈕會略過標成要略過的瀏覽紀錄（見「講者視窗」一節），但 Playwright 的 `page.goBack()` 與網頁呼叫的 `history.back()` 不會略過，所以 E2E test 要在 Chromium 載入擴充功能，用和上一頁按鈕一樣會略過這些紀錄的 `chrome.tabs.goBack()`，才驗證得了上一頁按鈕的行為。而且 Chromium 把 Playwright 的 `page.evaluate()` 與 locator 的 `textContent()` 這類在網頁裡執行程式的 API 算成使用者操作，呼叫這些 API 之後，Chromium 會取消這些標記。
 
 ## 模組劃分
 
@@ -171,6 +172,22 @@ sequenceDiagram
 ```
 
 > 設計理由：目前的位置以觀眾視窗為準。曾考慮讓兩個視窗對等，各自有 hash 與瀏覽紀錄，任一邊換頁時另一邊照做一次，但這樣要另外規定 NAV-R6 的瀏覽紀錄在兩個視窗之間怎麼對應，以及兩邊幾乎同時換頁時以哪一邊為準；而且往回換頁時，兩個視窗各自 render 上一頁、各自算出最後一步，講者在觀眾視窗操作過互動元件時（STEP-R14），兩邊可能停在不同的步驟。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
+
+觀眾視窗執行講者視窗送來的跳頁指令時，觀眾視窗自己沒有收到使用者的操作，所以觀眾視窗重新載入簡報之後，Chromium 的上一頁按鈕可能略過這份簡報的所有頁面（PRES-R3）。下圖是在 Playwright 的 Chromium 實測的結果，從 `file://` 與 `http://` 開啟都一樣，上一頁與下一頁按鈕用擴充功能的 `chrome.tabs.goBack()` 與 `chrome.tabs.goForward()` 代替（見「測試」一節）：
+
+```mermaid
+stateDiagram-v2
+  state "沒有收到過使用者操作" as idle
+  state "收到過使用者操作" as active
+  [*] --> idle: 網頁載入，包括重新整理，以及離開簡報之後用下一頁回到簡報
+  idle --> idle: 新增瀏覽紀錄時，把新增之前這份簡報的所有紀錄都標成要略過，重新整理之前的紀錄也算
+  idle --> active: 點畫面，或按下 Esc 與修飾鍵以外的按鍵，並取消這份簡報的紀錄上的標記
+  active --> active: 新增瀏覽紀錄時不標記
+```
+
+上一頁與下一頁按鈕都會略過標成要略過的紀錄，所以點上一頁按鈕回到開啟簡報之前的網頁之後，再點下一頁按鈕，觀眾視窗會直接顯示跳頁之後的頁面；開啟簡報之前沒有其他網頁時，上一頁按鈕不能按。瀏覽器回到上一頁的快捷鍵與滑鼠的上一頁側鍵不會略過這些紀錄：實測觀眾視窗收到 Cmd+← 或 Alt+← 的 keydown 時，Chromium 就取消標記，而瀏覽器處理這兩個快捷鍵之前，網頁會先收到 keydown，例如在輸入框裡按 Cmd+← 只會移動游標；用 DevTools protocol 送出滑鼠的上一頁側鍵時，觀眾視窗也回到跳頁之前的頁面。觸控與 macOS 觸控板回到上一頁的手勢沒有實測。講者視窗在自己的 keydown 事件裡直接改觀眾視窗的網址時，Chromium 仍然把新增之前的紀錄標成要略過，因為 Chromium 只看新增紀錄的那個視窗有沒有收到使用者操作。在 Safari 手動實測，觀眾視窗重新整理之後在講者視窗跳頁，上一頁按鈕仍然回到跳頁之前的頁面；Firefox 沒有實測。
+
+> 設計理由：觀眾視窗重新載入簡報之後，講者要先點一下觀眾視窗的畫面，點上一頁按鈕才會回到跳頁之前的頁面，PRES-R3 把這個情況寫成已知限制。曾考慮由講者視窗直接改觀眾視窗的網址，讓 Chromium 把講者在講者視窗按下的按鍵算成新增瀏覽紀錄時的使用者操作，但實測 Chromium 的上一頁按鈕仍然略過跳頁之前的頁面。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
 
 連線請求一律由講者視窗送出，因為觀眾視窗沒辦法在載入時用 `window.open('', name)` 找講者視窗：講者視窗不存在時，Chromium 與 Firefox 會擋下這個彈出視窗，沒擋的瀏覽器則會多開一個空白視窗。連線時兩個視窗比對 deck ID 與 build ID，deck ID 不同時，講者視窗關掉自己（PRES-R13）；build ID 不同時，講者視窗照 PRES-R12 顯示版本不同的提示。`diapo:deck` plugin 每次 build 與每次啟動 dev server 時都產生新的 build ID，寫進 `virtual:deck`。
 

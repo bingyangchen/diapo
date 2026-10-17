@@ -145,7 +145,7 @@ Press S in the window that plays the deck to open the presenter window, which sh
 1. Connect the projector and set the displays to extend the desktop, not to mirror it. On macOS, keep "Displays have separate Spaces" on in System Settings > Desktop & Dock, or a window going fullscreen on one display blacks out the other.
 2. Press S, then drag the deck window to the projector and press F there. The presenter window stays on your laptop.
 
-If the deck window is already on the projector when you press S, for example after closing the presenter window by mistake, the presenter window opens on the projector too; drag it back to your laptop. S does nothing while the deck window is in fullscreen, so press Esc first. The full rules are in `docs/specs/presenter.md`.
+If the deck window is already on the projector when you press S, for example after closing the presenter window by mistake, the presenter window opens on the projector too; drag it back to your laptop. S does nothing while the deck window is in fullscreen, so press Esc first. In Chrome, after the deck window reloads, click an empty spot on the deck window before clicking its Back button; otherwise, after a jump made in the presenter window, the Back button skips every slide of the deck and returns to the page you opened the deck from. The full rules are in `docs/specs/presenter.md`.
 
 ## Deployment
 
