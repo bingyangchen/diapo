@@ -96,7 +96,7 @@ Deck ID 與 slide ID 只能用小寫英數字與 `-`，而且 `-` 不能出現�
 
 ### FRAME-R5 沒有用到的頁面不會打包進 Slidetray
 
-`slides/` 目錄裡沒有列在 `deck.json` 的 `slides`、也沒有被列出的頁面 import 的 TSX 檔，不會打包進 slidetray。
+`slides/` 目錄裡沒有列在 `deck.json` 的 `slides`、也沒有被列出的頁面直接或間接 import 的 TSX 檔，不會打包進 slidetray。
 
 - FRAME-R5.1 沒有列在 `slides` 的頁面
   - 前提：`slides/` 目錄底下有 `draft.tsx`，但 `deck.json` 的 `slides` 沒有列出 `draft`

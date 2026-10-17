@@ -14,6 +14,7 @@ flowchart TD
   overview("預覽總覽<br/>未規劃"):::unplanned
   reorder("排序與隱藏<br/>未規劃"):::unplanned
   annotation("畫筆標註<br/>未規劃"):::unplanned
+  page_links("頁面裡的連結<br/>未規劃"):::unplanned
   P0004("0004 講者模式<br/>已核准"):::approved
   theme("主題、亮暗配色與字型<br/>未規劃"):::unplanned
   layouts("版型元件<br/>未規劃"):::unplanned
@@ -32,6 +33,7 @@ flowchart TD
   P0001 --> P0002 --> P0003 --> transitions --> magic_move
   P0003 --> overview --> reorder
   P0002 --> annotation
+  P0004 --> page_links
   P0003 --> P0004 --> skill_generate
   P0003 --> pdf_export
   P0003 --> layout_check
@@ -63,6 +65,13 @@ flowchart TD
 5. 預覽總覽：以縮圖列出每一頁，縮圖顯示每頁最後一步的畫面。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。
 6. 排序與隱藏：在總覽拖曳縮圖調整順序。在本機開發時，拖曳排序的結果寫回 `deck.json`；在其他環境，新的順序與隱藏的頁面存在這台電腦的瀏覽器裡，可以還原。
 7. 畫筆標註：在頁面上疊一層 canvas，換頁後清除。
+8. 頁面裡的連結：講者或觀眾點頁面裡的外部連結時，播放簡報的分頁留在原本的頁面。專案擁有者已經做了以下決定，寫 plan 時沿用：
+   - 外部連結，也就是網址不是 `#` 開頭的連結，開在新的分頁，因為觀眾視窗離開簡報時，講者視窗會斷線，而且觀眾視窗連到回應 `Cross-Origin-Opener-Policy` 的網站時，講者視窗還可能跟著關閉。
+   - 播放器只替沒寫 `target` 的外部連結加上 `target="_blank"`，不攔下點擊，所以寫了 `target` 的外部連結、`#` 開頭的連結，以及按著修飾鍵或用滑鼠中鍵點的情況，都照瀏覽器的預設處理。
+   - 頁面裡的連結用滑鼠點時不取得焦點，比照 NAV-R11 的全螢幕按鈕，讓講者點過連結之後按 Space 或 Enter 仍然會換頁。
+   - 播放途中 hash 變成 `#` 或 `#/` 時，播放器比照 NAV-R2 停在目前的頁面，不跳回第一頁。
+
+   這個階段也要處理播放器修正 hash 時留下的瀏覽紀錄：播放途中，網址的 hash 改成指向不存在頁面的 hash，或 hash 照 STEP-R11 到 STEP-R13 修正之後和目前的頁面與步驟相同時（NAV-R2.3），瀏覽器先新增一筆瀏覽紀錄，播放器再改寫這筆紀錄，所以講者第一次按瀏覽器的上一頁時，畫面不動。
 
 ### 講者模式
 
