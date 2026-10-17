@@ -28,7 +28,16 @@ export async function buildDist(options: {
   // copied on its own.
   for (const deck of decks) {
     const outDir = path.join(outDirectory, deck.id);
-    await build(mergeConfig(makeDeckViteConfig(deck.directory), { build: { outDir } }));
+    try {
+      await build(
+        mergeConfig(makeDeckViteConfig(deck.directory), { build: { outDir } }),
+      );
+    } catch (error) {
+      // A plugin that finds a problem in the deck, such as invalid notes (FRAME-R7), throws a
+      // BuildError, which the bundler wraps; unwrapping it reports the problem without a
+      // stack trace.
+      throw findBuildError(error) ?? error;
+    }
   }
   await build(makeSiteViteConfig(decks, outDirectory));
 
@@ -57,4 +66,15 @@ async function checkOutDirectoryIsEmpty(outDirectory: string): Promise<void> {
         `delete it or choose another --out-dir`,
     );
   }
+}
+
+function findBuildError(error: unknown): BuildError | null {
+  if (error instanceof BuildError) return error;
+  if (error instanceof Error && "errors" in error && Array.isArray(error.errors)) {
+    const buildError: unknown = error.errors.find(
+      (wrappedError: unknown) => wrappedError instanceof BuildError,
+    );
+    if (buildError instanceof BuildError) return buildError;
+  }
+  return null;
 }

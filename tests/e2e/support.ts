@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { cp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -53,6 +55,17 @@ export async function expectExampleFirstSlide(page: Page): Promise<void> {
     "naturalWidth",
     48,
   );
+}
+
+/** Presses a key and holds it through `repeatCount` auto-repeats before releasing it. */
+export async function holdKey(
+  page: Page,
+  key: string,
+  repeatCount: number,
+): Promise<void> {
+  // Playwright sends every keydown after the first one with `repeat` set.
+  for (let count = 0; count <= repeatCount; count++) await page.keyboard.down(key);
+  await page.keyboard.up(key);
 }
 
 export function makeDeckUrl(deckId: string, hash = ""): string {
@@ -159,4 +172,109 @@ export async function swipe(
       changedTouches: [touch],
     });
   }
+}
+
+export type PresenterPane = "current" | "next-step" | "next-slide";
+
+/**
+ * Presses `S` in the audience window and returns the presenter window once it shows the
+ * audience window's position.
+ */
+export async function openPresenter(audience: Page): Promise<Page> {
+  const presenterPromise = audience.waitForEvent("popup");
+  await audience.keyboard.press("s");
+  const presenter = await presenterPromise;
+  await expect(presenter.getByTestId("slide-number")).toBeVisible();
+  return presenter;
+}
+
+export function getPresenterPane(presenter: Page, pane: PresenterPane): Locator {
+  return presenter.getByTestId(`presenter-${pane}`);
+}
+
+/**
+ * Checks the heading of a slide in a pane of the presenter window. The panes are inert, which
+ * leaves their content out of role queries.
+ */
+export async function expectPresenterSlide(
+  presenter: Page,
+  pane: PresenterPane,
+  heading: string,
+): Promise<void> {
+  await expect(getPresenterPane(presenter, pane).locator("h1")).toHaveText(heading);
+}
+
+export function getElapsedTime(presenter: Page): Locator {
+  return presenter.getByTestId("elapsed-time");
+}
+
+export function getPresenterAlert(presenter: Page): Locator {
+  return presenter.getByTestId("presenter-alert");
+}
+
+/**
+ * Pretends that the audience window's tab went to the background or came back. Playwright
+ * keeps every page visible, even behind another tab, so the tests set the state themselves.
+ */
+export async function setDocumentHidden(page: Page, isHidden: boolean): Promise<void> {
+  await page.evaluate(`
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "${isHidden ? "hidden" : "visible"}",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  `);
+}
+
+/**
+ * Copies a fixture slidetray into the test's output directory, which Playwright clears before
+ * each run, so a test can change its files.
+ */
+export async function copySlidetray(deckId: string): Promise<string> {
+  const directory = test.info().outputPath(deckId);
+  await cp(path.join(E2E_OUTPUT, deckId), directory, { recursive: true });
+  return directory;
+}
+
+/**
+ * Makes a copied slidetray look like another build of the same deck, the way a rebuild after
+ * editing the deck would: the JS gets a new build ID and, like Vite's content hash, a new file
+ * name, so no browser serves the old file from its cache.
+ */
+export async function simulateRebuild(slidetrayDirectory: string): Promise<void> {
+  const assetsDirectory = path.join(slidetrayDirectory, "assets");
+  const htmlPath = path.join(slidetrayDirectory, "index.html");
+  let html = await readFile(htmlPath, "utf8");
+  for (const name of await readdir(assetsDirectory)) {
+    if (!name.endsWith(".js")) continue;
+    const filePath = path.join(assetsDirectory, name);
+    const code = await readFile(filePath, "utf8");
+    const rebuiltCode = code.replace(
+      /(buildId:\s*["'`])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(["'`])/,
+      `$1${randomUUID()}$2`,
+    );
+    if (rebuiltCode === code) throw new Error(`${filePath} has no build ID`);
+    const rebuiltName = `rebuilt-${randomUUID()}.js`;
+    await writeFile(path.join(assetsDirectory, rebuiltName), rebuiltCode);
+    await rm(filePath);
+    html = html.replace(`assets/${name}`, `assets/${rebuiltName}`);
+  }
+  await writeFile(htmlPath, html);
+}
+
+/**
+ * Records every call to the presenter window's `focus()`, which brings it to the front. Only a
+ * window of the same origin sees its own `focus` replaced, so the deck must come from a static
+ * server rather than `file://`.
+ */
+export async function recordFocusCalls(
+  presenter: Page,
+): Promise<() => Promise<number>> {
+  await presenter.evaluate(`
+    window.focusCalls = 0;
+    window.focus = () => {
+      window.focusCalls++;
+    };
+  `);
+  return () => presenter.evaluate<number>("window.focusCalls");
 }

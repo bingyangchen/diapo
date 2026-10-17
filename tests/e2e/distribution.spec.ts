@@ -67,8 +67,11 @@ test.describe("DIST-R3 the site's home page lists published decks", () => {
     await page.goto(staticServerUrl);
 
     await expect(page.getByRole("listitem")).toHaveText([
+      "年度回顧",
       "操作",
+      "示範",
       "範例",
+      "備註",
       SECOND_DECK_TITLE,
       "分步",
     ]);
@@ -95,8 +98,11 @@ test.describe("DIST-R4 the site plays under a subpath", () => {
   }) => {
     await page.goto(staticServerUrl);
     await expect(page.getByRole("listitem")).toHaveText([
+      "年度回顧",
       "操作",
+      "示範",
       "範例",
+      "備註",
       SECOND_DECK_TITLE,
       "分步",
     ]);

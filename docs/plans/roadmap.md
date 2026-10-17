@@ -15,7 +15,7 @@ flowchart TD
   reorder("排序與隱藏<br/>未規劃"):::unplanned
   annotation("畫筆標註<br/>未規劃"):::unplanned
   page_links("頁面裡的連結<br/>未規劃"):::unplanned
-  P0004("0004 講者模式<br/>已核准"):::approved
+  P0004("0004 講者模式<br/>已完成"):::done
   theme("主題、亮暗配色與字型<br/>未規劃"):::unplanned
   layouts("版型元件<br/>未規劃"):::unplanned
   media("圖片與影片<br/>未規劃"):::unplanned
@@ -72,10 +72,6 @@ flowchart TD
    - 播放途中 hash 變成 `#` 或 `#/` 時，播放器比照 NAV-R2 停在目前的頁面，不跳回第一頁。
 
    這個階段也要處理播放器修正 hash 時留下的瀏覽紀錄：播放途中，網址的 hash 改成指向不存在頁面的 hash，或 hash 照 STEP-R11 到 STEP-R13 修正之後和目前的頁面與步驟相同時（NAV-R2.3），瀏覽器先新增一筆瀏覽紀錄，播放器再改寫這筆紀錄，所以講者第一次按瀏覽器的上一頁時，畫面不動。
-
-### 講者模式
-
-講者在筆電上看到目前頁、下一步、下一頁、備註與時間，投影幕只顯示簡報。播放器另外開一個講者視窗，目前的位置以原本播放簡報的觀眾視窗為準，講者在任一個視窗操作，兩個視窗都一起換頁；備註以 Markdown 撰寫，寫在每一頁的 TSX 檔裡。計劃寫在 [0004](0004-presenter-mode.md)。
 
 ### 主題與版型
 

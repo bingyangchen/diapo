@@ -30,6 +30,8 @@ export default function Agenda() {
 
 > 設計理由：`<Step>` 只負責讓內容出現，替換內容交給 `useStep`。曾考慮讓 `<Step>` 加上 `until`，例如 `<Step at={2} until={4}>`，但第 4 步時內容是已經消失、還是第 4 步之後才消失，AI 容易寫錯，講者也要實際按到那一步才看得出來；頁面元件本身就能呼叫 `useStep`，替換內容只要寫一個條件判斷。完整討論見 [0003](../plans/archive/0003-steps.md)。
 
+本 spec 裡換頁與網址 hash 的規則（STEP-R9 到 STEP-R14）描述播放簡報的視窗，也就是講者模式的觀眾視窗；講者視窗的行為寫在 [presenter.md](presenter.md)。
+
 開啟簡報或網址的 hash 改變時，播放器依下圖的順序決定顯示哪一頁的哪一步，每個判斷的細節寫在對應的需求裡。畫面顯示的頁面與步驟和 hash 不一致時，播放器把 hash 改成畫面顯示的頁面與步驟。
 
 ```mermaid

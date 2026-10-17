@@ -6,29 +6,42 @@ import {
   useReducer,
   useState,
 } from "react";
+import { flushSync } from "react-dom";
 import type { Deck, Slide } from "virtual:deck";
 
 import type { StepContextValue } from "../framework/step-context";
 import { getStepCount, isValidStep, StepContext } from "../framework/step-context";
 import { useActivity } from "./activity";
 import { Canvas } from "./Canvas";
-import { enterFullscreen, isFullscreenSupported, toggleFullscreen } from "./fullscreen";
+import {
+  enterFullscreen,
+  isFullscreen,
+  isFullscreenSupported,
+  toggleFullscreen,
+} from "./fullscreen";
 import { FullscreenButton } from "./FullscreenButton";
+import type { PlayerCommand } from "./presenter/audience-link";
+import { useAudienceLink } from "./presenter/audience-link";
+import type { AudiencePosition } from "./presenter/protocol";
 import type { Shortcut } from "./shortcuts";
-import { getShortcut, isRepeatable } from "./shortcuts";
+import {
+  getShortcut,
+  isPageNumberInDeck,
+  isRepeatable,
+  PAGE_NUMBER_TIMEOUT_MS,
+} from "./shortcuts";
 import { makeSlideHash, parseSlideHash } from "./slide-hash";
 import { getEmptyStepRanges, makeStepRegistry } from "./step-registry";
 import type { SwipeDirection } from "./swipe";
 import { useSwipe } from "./swipe";
 
-const PAGE_NUMBER_TIMEOUT_MS = 3000;
-
 /**
  * A step the slide may not have, which the player checks against the step count once the
  * slide has rendered. `hash` is the URL hash that asked for the step, or null when the
- * speaker stepped back from the next slide.
+ * speaker stepped back from the next slide. `previousStep` is the step shown before a check
+ * on the same slide, which the checked step may turn out to be; null for another slide.
  */
-type StepCheck = { hash: string | null };
+type StepCheck = { hash: string | null; previousStep: number | null };
 
 type PlayerState = {
   slideIndex: number;
@@ -63,6 +76,9 @@ type PlayerAction =
  * register while it renders (STEP-R5). So to show a step the slide may not have, such as the
  * last step when stepping back (STEP-R9) or a step from the hash (STEP-R12), the player
  * renders the slide first and corrects the step in a layout effect, before the browser paints.
+ *
+ * This window is the audience window of presenter mode, and the source of truth for the
+ * presenter window it opens with `S` (PRES-R1, PRES-R2).
  */
 export function Player({ deck }: { deck: Deck }) {
   const slideIds = deck.slides.map((slide) => slide.id);
@@ -74,6 +90,22 @@ export function Player({ deck }: { deck: Deck }) {
   const [stepRegistry] = useState(makeStepRegistry);
   const { isUserActive, reportActivity } = useActivity();
   const slide = getSlide(deck, state.slideIndex);
+  const position: AudiencePosition | null =
+    state.stepCheck === null
+      ? {
+          slideIndex: state.slideIndex,
+          step: state.step,
+          isBlackScreen: state.isBlackScreen,
+        }
+      : null;
+  const { openPresenterWindow } = useAudienceLink({
+    deck,
+    position,
+    stepRegistry,
+    // Renders each command before the next message arrives, since a command reads the
+    // state, like a second key would (see showStep).
+    runCommand: (command) => flushSync(() => runPresenterCommand(command)),
+  });
 
   function showStep(
     slideIndex: number,
@@ -129,20 +161,81 @@ export function Player({ deck }: { deck: Deck }) {
         return toggleFullscreen();
       case "enter-fullscreen":
         return enterFullscreen();
+      case "open-presenter":
+        // Opening a window or bringing one to the front makes browsers leave fullscreen,
+        // which the audience would see (PRES-R1).
+        if (!isFullscreen()) openPresenterWindow();
+        return;
     }
+  }
+
+  function runPresenterCommand(command: PlayerCommand): void {
+    // The presenter window decides by the black screen it last heard of, which this window
+    // may have changed since.
+    if (
+      state.isBlackScreen &&
+      command.type !== "toggle-black-screen" &&
+      command.type !== "go-to-hash"
+    ) {
+      return dispatch({ type: "end-black-screen" });
+    }
+    switch (command.type) {
+      case "next":
+        return goToNextStep();
+      case "previous":
+        return goToPreviousStep();
+      case "first":
+        return showStep(0, 0, "push");
+      case "last":
+        return showStep(deck.slides.length - 1, 0, "push");
+      case "go-to-page":
+        if (isPageNumberInDeck(command.pageNumber, deck.slides.length)) {
+          showStep(command.pageNumber - 1, 0, "push");
+        }
+        return;
+      case "go-to-hash":
+        return goToHash(command.hash);
+      case "toggle-black-screen":
+        return dispatch({ type: "toggle-black-screen" });
+      case "end-black-screen":
+        return dispatch({ type: "end-black-screen" });
+    }
+  }
+
+  /**
+   * Goes where a link in the notes points, like a link on the slide (PRES-R10), but adds no
+   * history entry when the link leads to the current slide and step.
+   */
+  function goToHash(hash: string): void {
+    const parsedHash = parseSlideHash(hash, slideIds);
+    if (parsedHash === null) {
+      console.warn(makeUnknownHashWarning(hash));
+      return;
+    }
+    if (parsedHash.slideIndex !== state.slideIndex) {
+      // The hash change takes the same path as a click on a link to another slide.
+      window.location.hash = hash;
+      return;
+    }
+    if (parsedHash.isStepMalformed) console.warn(makeMalformedStepWarning(hash));
+    const currentStepCount = getStepCount(stepRegistry.getRegisteredSteps());
+    if (parsedHash.step > currentStepCount) {
+      console.warn(
+        makeStepOverflowWarning(hash, parsedHash.step, slide.id, currentStepCount),
+      );
+    }
+    showStep(state.slideIndex, Math.min(parsedHash.step, currentStepCount), "push");
   }
 
   const syncWithHash = useEffectEvent(() => {
     const hash = window.location.hash;
     const parsedHash = parseSlideHash(hash, slideIds);
     if (parsedHash === null) {
-      console.warn(`No slide matches the URL hash "${hash}"`);
+      console.warn(makeUnknownHashWarning(hash));
       replaceHash(makeSlideHash(slide.id, state.step));
       return;
     }
-    if (parsedHash.isStepMalformed) {
-      console.warn(`The URL hash "${hash}" names no valid step, so it shows step 0`);
-    }
+    if (parsedHash.isStepMalformed) console.warn(makeMalformedStepWarning(hash));
     if (parsedHash.step > 0) {
       dispatch({
         type: "check-step",
@@ -159,9 +252,7 @@ export function Player({ deck }: { deck: Deck }) {
   const resolveStep = useEffectEvent(({ hash }: StepCheck) => {
     const stepCount = getStepCount(stepRegistry.getRegisteredSteps());
     if (hash !== null && state.step > stepCount) {
-      console.warn(
-        `The URL hash "${hash}" names step ${state.step}, but slide "${slide.id}" has ${stepCount} steps`,
-      );
+      console.warn(makeStepOverflowWarning(hash, state.step, slide.id, stepCount));
     }
     const step = Math.min(state.step, stepCount);
     replaceHash(makeSlideHash(slide.id, step));
@@ -195,7 +286,12 @@ export function Player({ deck }: { deck: Deck }) {
     event.preventDefault();
     if (event.repeat && !isRepeatable(shortcut)) return;
     if (state.isBlackScreen) {
-      if (shortcut === "toggle-fullscreen" || shortcut === "enter-fullscreen") {
+      // Opening the presenter window keeps the black screen too (NAV-R9).
+      if (
+        shortcut === "toggle-fullscreen" ||
+        shortcut === "enter-fullscreen" ||
+        shortcut === "open-presenter"
+      ) {
         runShortcut(shortcut, event.key);
       } else {
         dispatch({ type: "end-black-screen" });
@@ -211,7 +307,7 @@ export function Player({ deck }: { deck: Deck }) {
       dispatch({ type: "cancel-page-number" });
       if (event.key === "Enter") {
         const pageNumber = Number(state.pageNumberDigits);
-        if (pageNumber >= 1 && pageNumber <= deck.slides.length) {
+        if (isPageNumberInDeck(pageNumber, deck.slides.length)) {
           showStep(pageNumber - 1, 0, "push");
         }
         return;
@@ -326,7 +422,7 @@ function makeInitialState({
   return {
     slideIndex: parsedHash?.slideIndex ?? 0,
     step,
-    stepCheck: step > 0 ? { hash } : null,
+    stepCheck: step > 0 ? { hash, previousStep: null } : null,
     isBlackScreen: false,
     pageNumberDigits: "",
   };
@@ -336,16 +432,38 @@ function reducePlayerState(state: PlayerState, action: PlayerAction): PlayerStat
   switch (action.type) {
     case "show-step":
       return makeShownState(state, action.slideIndex, action.step, null);
-    case "check-step":
+    case "check-step": {
+      const isSameSlide = action.slideIndex === state.slideIndex;
+      // A check during another check keeps the step shown before the first one.
+      const previousStep = !isSameSlide
+        ? null
+        : state.stepCheck === null
+          ? state.step
+          : state.stepCheck.previousStep;
       return makeShownState(state, action.slideIndex, action.step, {
         hash: action.hash,
+        previousStep,
       });
-    case "resolve-step":
-      return { ...state, step: action.step, stepCheck: null };
+    }
+    case "resolve-step": {
+      // Keeps the page number being typed when the checked step is the step shown before,
+      // since then neither the slide nor the step changed (NAV-R5).
+      const isSamePosition = state.stepCheck?.previousStep === action.step;
+      return {
+        ...state,
+        step: action.step,
+        stepCheck: null,
+        pageNumberDigits: isSamePosition ? state.pageNumberDigits : "",
+      };
+    }
+    // Switching the black screen cancels the page number being typed in either window,
+    // including a switch from the presenter window (PRES-R3).
     case "toggle-black-screen":
-      return { ...state, isBlackScreen: !state.isBlackScreen };
+      return { ...state, isBlackScreen: !state.isBlackScreen, pageNumberDigits: "" };
     case "end-black-screen":
-      return { ...state, isBlackScreen: false };
+      return state.isBlackScreen
+        ? { ...state, isBlackScreen: false, pageNumberDigits: "" }
+        : state;
     case "type-page-number-digit":
       return { ...state, pageNumberDigits: state.pageNumberDigits + action.digit };
     case "delete-page-number-digit":
@@ -361,18 +479,37 @@ function makeShownState(
   step: number,
   stepCheck: StepCheck | null,
 ): PlayerState {
-  const isSameSlide = slideIndex === state.slideIndex;
+  const isSamePosition = slideIndex === state.slideIndex && step === state.step;
   // The step shown has already passed its check, so it needs no other.
-  if (isSameSlide && step === state.step && state.stepCheck === null) return state;
-  // A slide change cancels the page number being typed (NAV-R5) but keeps the black
-  // screen (NAV-R9).
+  if (isSamePosition && state.stepCheck === null) return state;
+  // A change of slide or step cancels the page number being typed (NAV-R5) but keeps the
+  // black screen (NAV-R9). A checked step on the same slide may turn out to be the step shown,
+  // so resolve-step decides then.
+  const isPositionPending = stepCheck !== null && stepCheck.previousStep !== null;
   return {
     ...state,
     slideIndex,
     step,
     stepCheck,
-    pageNumberDigits: isSameSlide ? state.pageNumberDigits : "",
+    pageNumberDigits: isSamePosition || isPositionPending ? state.pageNumberDigits : "",
   };
+}
+
+function makeUnknownHashWarning(hash: string): string {
+  return `No slide matches the URL hash "${hash}"`;
+}
+
+function makeMalformedStepWarning(hash: string): string {
+  return `The URL hash "${hash}" names no valid step, so it shows step 0`;
+}
+
+function makeStepOverflowWarning(
+  hash: string,
+  step: number,
+  slideId: string,
+  stepCount: number,
+): string {
+  return `The URL hash "${hash}" names step ${step}, but slide "${slideId}" has ${stepCount} steps`;
 }
 
 function replaceHash(slideHash: string): void {

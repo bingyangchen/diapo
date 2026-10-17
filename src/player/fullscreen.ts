@@ -21,7 +21,7 @@ export function toggleFullscreen(): void {
   else void document.documentElement.requestFullscreen();
 }
 
-function isFullscreen(): boolean {
+export function isFullscreen(): boolean {
   // `instanceof` also covers browsers without the Fullscreen API, which leave it undefined.
   return document.fullscreenElement instanceof Element;
 }

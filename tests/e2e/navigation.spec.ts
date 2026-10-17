@@ -9,9 +9,11 @@ import {
   expectSlide,
   getBox,
   getCenter,
+  holdKey,
   makeDeckUrl,
   makeFileUrl,
   openDeck,
+  openPresenter,
   swipe,
 } from "./support.ts";
 
@@ -331,6 +333,58 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await page.keyboard.press("Enter");
 
     await expectSlide(page, "Summary");
+  });
+
+  test("NAV-R5.13 the back button to another step of the slide cancels the page number", async ({
+    page,
+  }) => {
+    await openDeck(page, "steps");
+    await page.goto(makeDeckUrl("steps", "#/list/1"));
+    await expect(page).toHaveURL(/#\/list\/1$/);
+    await page.goto(makeDeckUrl("steps", "#/list/3"));
+    await expect(page).toHaveURL(/#\/list\/3$/);
+    await page.keyboard.press("2");
+
+    await page.goBack();
+
+    await expect(page).toHaveURL(/#\/list\/1$/);
+    await expect(page.getByTestId("page-number")).toHaveCount(0);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#\/list\/2$/);
+  });
+
+  test("NAV-R5.14 the back button to another slide cancels the page number", async ({
+    page,
+  }) => {
+    await openDeck(page, "example");
+    await page.keyboard.press("ArrowRight");
+    await expectSlide(page, "Agenda");
+    await page.keyboard.press("End");
+    await expectSlide(page, "Summary");
+    await page.keyboard.press("1");
+
+    await page.goBack();
+
+    await expectSlide(page, "Agenda");
+    await expect(page.getByTestId("page-number")).toHaveCount(0);
+    await page.keyboard.press("Enter");
+    await expectSlide(page, "Summary");
+  });
+
+  test("NAV-R5.15 a hash that resolves to the current step keeps the page number", async ({
+    page,
+  }) => {
+    await openDeck(page, "steps");
+    await page.goto(makeDeckUrl("steps", "#/list/3"));
+    await expect(page).toHaveURL(/#\/list\/3$/);
+    await page.keyboard.press("1");
+
+    await page.goto(makeDeckUrl("steps", "#/list/9"));
+
+    await expect(page).toHaveURL(/#\/list\/3$/);
+    await expect(page.getByTestId("page-number")).toHaveText("1");
+    await page.keyboard.press("Enter");
+    await expectSlide(page, "Intro");
   });
 });
 
@@ -728,6 +782,18 @@ test.describe("NAV-R9 the black screen", () => {
     await expect(page.getByTestId("black-screen")).toHaveCount(0);
     await expectSlide(page, "Agenda");
   });
+
+  test("NAV-R9.8 S on the black screen opens the presenter window and keeps the black screen", async ({
+    page,
+  }) => {
+    await openDeck(page, "example");
+    await page.keyboard.press("b");
+    await expect(page.getByTestId("black-screen")).toBeVisible();
+
+    await openPresenter(page);
+
+    await expect(page.getByTestId("black-screen")).toBeVisible();
+  });
 });
 
 test.describe("NAV-R10 fullscreen", () => {
@@ -959,13 +1025,6 @@ test.describe("NAV-R14 holding a key down", () => {
     await expectFullscreen(page, true);
   });
 });
-
-/** Presses a key and holds it through `repeatCount` auto-repeats before releasing it. */
-async function holdKey(page: Page, key: string, repeatCount: number): Promise<void> {
-  // Playwright sends every keydown after the first one with `repeat` set.
-  for (let count = 0; count <= repeatCount; count++) await page.keyboard.down(key);
-  await page.keyboard.up(key);
-}
 
 /**
  * Installs a paused fake clock before the deck opens, so the player's timers, including

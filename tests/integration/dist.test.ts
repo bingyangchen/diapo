@@ -65,6 +65,12 @@ describe("FRAME-R5 unused slide files stay out of the slidetray", () => {
 
     expect(slidetray).toContain("Summary");
   });
+
+  test("FRAME-R5.3 a slide file two re-exports away stays in the slidetray", async () => {
+    const slidetray = await readAllFiles(path.join(localOutput, "notes"));
+
+    expect(slidetray).toContain("Chain end");
+  });
 });
 
 /** Returns the text of the home page and its assets, which embed the deck list. */

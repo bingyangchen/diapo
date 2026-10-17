@@ -6,7 +6,8 @@ export type Shortcut =
   | "digit"
   | "toggle-black-screen"
   | "toggle-fullscreen"
-  | "enter-fullscreen";
+  | "enter-fullscreen"
+  | "open-presenter";
 
 // Matches `event.key`, so the keys follow the keyboard layout and NumLock: with NumLock
 // off, the numpad sends PageDown, End, and so on instead of digits.
@@ -25,6 +26,7 @@ const KEY_TO_SHORTCUT: Record<string, Shortcut> = {
   ".": "toggle-black-screen",
   f: "toggle-fullscreen",
   F5: "enter-fullscreen",
+  s: "open-presenter",
   ...Object.fromEntries([..."0123456789"].map((digit) => [digit, "digit"])),
 };
 
@@ -46,6 +48,14 @@ const NON_REPEATING_SHORTCUTS = new Set<Shortcut>([
   "toggle-fullscreen",
   "enter-fullscreen",
 ]);
+
+/** How long a page number being typed waits for the next key (NAV-R5). */
+export const PAGE_NUMBER_TIMEOUT_MS = 3000;
+
+/** Whether a typed page number names a slide of the deck; page numbers start at 1 (NAV-R5). */
+export function isPageNumberInDeck(pageNumber: number, slideCount: number): boolean {
+  return pageNumber >= 1 && pageNumber <= slideCount;
+}
 
 export function isRepeatable(shortcut: Shortcut): boolean {
   return !NON_REPEATING_SHORTCUTS.has(shortcut);
