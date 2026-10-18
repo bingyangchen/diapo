@@ -468,10 +468,8 @@ test.describe("OVW-R5 page numbers and the current slide's mark", () => {
       "6",
       "7",
     ]);
-    await expect(getThumbnail(page, 2)).toContainText("目前");
-    await expect(
-      page.getByTestId("overview-thumbnail").filter({ hasText: "目前" }),
-    ).toHaveCount(1);
+    await expect(getCurrentSlideIcon(getThumbnail(page, 2))).toBeVisible();
+    await expect(getCurrentSlideIcon(getOverview(page))).toHaveCount(1);
     await expectSelection(page, 2);
   });
 
@@ -484,8 +482,8 @@ test.describe("OVW-R5 page numbers and the current slide's mark", () => {
     await page.keyboard.press("ArrowRight");
 
     await expectSelection(page, 3);
-    await expect(getThumbnail(page, 2)).toContainText("目前");
-    await expect(getThumbnail(page, 3)).not.toContainText("目前");
+    await expect(getCurrentSlideIcon(getThumbnail(page, 2))).toBeVisible();
+    await expect(getCurrentSlideIcon(getThumbnail(page, 3))).toHaveCount(0);
   });
 });
 
@@ -1873,6 +1871,11 @@ async function expectKeyToScrollOverview(page: Page, key: string): Promise<void>
   await expect.poll(() => getOverviewScrollTop(page)).toBeGreaterThan(0);
   await expectSelection(page, 1);
   await expectOverviewOpen(page);
+}
+
+/** The pin that marks the current slide's page number (OVW-R5). */
+function getCurrentSlideIcon(container: Locator): Locator {
+  return container.getByRole("img", { name: "目前的頁面" });
 }
 
 function getOverviewButton(page: Page): Locator {

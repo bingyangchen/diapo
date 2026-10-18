@@ -239,18 +239,25 @@ export function Overview({
               data-slide-index={slideIndex}
               data-selected={isSelected ? "" : undefined}
             >
-              <div
-                data-thumbnail-frame={slideIndex}
-                className={`relative aspect-video cursor-pointer overflow-hidden bg-neutral-800 ${isSelected ? "outline-4 outline-offset-4 outline-sky-400" : ""}`}
-                onClick={() => onThumbnailClick(slideIndex)}
-              >
-                {nearSlideIndexes.has(slideIndex) && thumbnailWidth > 0 && (
-                  <SlideCopy
-                    slide={slide}
-                    step="last"
-                    width={thumbnailWidth}
-                    height={(thumbnailWidth * CANVAS_HEIGHT) / CANVAS_WIDTH}
-                  />
+              <div className="relative">
+                <div
+                  data-thumbnail-frame={slideIndex}
+                  className="relative aspect-video cursor-pointer overflow-hidden bg-neutral-800"
+                  onClick={() => onThumbnailClick(slideIndex)}
+                >
+                  {nearSlideIndexes.has(slideIndex) && thumbnailWidth > 0 && (
+                    <SlideCopy
+                      slide={slide}
+                      step="last"
+                      width={thumbnailWidth}
+                      height={(thumbnailWidth * CANVAS_HEIGHT) / CANVAS_WIDTH}
+                    />
+                  )}
+                </div>
+                {/* The selection rounds its corners around the square thumbnail, whose corners
+                    match the canvas that zooms onto it (OVW-R21). */}
+                {isSelected && (
+                  <div className="pointer-events-none absolute -inset-2 rounded-lg border-4 border-sky-400" />
                 )}
               </div>
               <div className="mt-3 flex h-8 items-center gap-2 text-xl tabular-nums">
@@ -262,9 +269,18 @@ export function Overview({
                   {slideIndex + 1}
                 </span>
                 {slideIndex === currentSlideIndex && (
-                  <span className="rounded bg-amber-400 px-2 text-base font-medium text-neutral-900">
-                    目前
-                  </span>
+                  <svg
+                    role="img"
+                    aria-label="目前的頁面"
+                    className="size-6 text-amber-400"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"
+                    />
+                  </svg>
                 )}
               </div>
             </div>
