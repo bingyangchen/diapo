@@ -1,20 +1,28 @@
 import path from "node:path";
 
-import type { Page } from "@playwright/test";
-import { expect, test } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 import {
+  annotateBackForwardCache,
   collectConsoleMessages,
   E2E_OUTPUT,
+  expectOverviewClosed,
+  expectOverviewOpen,
+  expectSelection,
   expectSlide,
   getBox,
+  getCanvas,
   getCenter,
   holdKey,
   makeDeckUrl,
   makeFileUrl,
   openDeck,
   openPresenter,
+  openSiteDeck,
+  recordPageShowPersisted,
   swipe,
+  test,
 } from "./support.ts";
 
 // The `example` fixture deck plays intro, agenda, recap; `controls` has 12 slides, starting
@@ -385,6 +393,60 @@ test.describe("NAV-R5 typing a page number jumps to that slide", () => {
     await expect(page.getByTestId("page-number")).toHaveText("1");
     await page.keyboard.press("Enter");
     await expectSlide(page, "Intro");
+  });
+
+  test("NAV-R5.16 the overview button cancels the page number and opens the overview", async ({
+    page,
+  }) => {
+    await openDeck(page, "example");
+    await page.mouse.move(100, 100);
+
+    await page.keyboard.press("3");
+    await getOverviewButton(page).click();
+    await expect(page.getByTestId("page-number")).toHaveCount(0);
+    await expectOverviewOpen(page);
+    await page.keyboard.press("Enter");
+
+    await expectOverviewClosed(page);
+    await expectSlide(page, "Intro");
+  });
+
+  test("NAV-R5.17 leaving the deck and coming back cancels the page number", async ({
+    page,
+    staticServerUrl,
+  }) => {
+    // Holds back the timeout of the page number, so only coming back can cancel it.
+    await installPausedClock(page);
+    await openSiteDeck(page, staticServerUrl, "範例");
+    await recordPageShowPersisted(page);
+
+    await page.keyboard.press("3");
+    await expect(page.getByTestId("page-number")).toHaveText("3");
+    await page.goBack();
+    await expect(page).toHaveURL(staticServerUrl);
+    await page.goForward();
+    await expect(page).toHaveURL(/#\/intro$/);
+    await expect(page.getByTestId("page-number")).toHaveCount(0);
+    await page.keyboard.press("Enter");
+
+    await expectSlide(page, "Agenda");
+    await annotateBackForwardCache(page);
+  });
+
+  test("NAV-R5.18 the overview button cancels the page number and closes the overview", async ({
+    page,
+  }) => {
+    await openDeck(page, "example");
+    await page.keyboard.press("g");
+    await expectOverviewOpen(page);
+
+    await page.keyboard.press("3");
+    await getOverviewButton(page).click();
+    await expect(page.getByTestId("page-number")).toHaveCount(0);
+    await expectOverviewClosed(page);
+    await page.keyboard.press("Enter");
+
+    await expectSlide(page, "Agenda");
   });
 });
 
@@ -794,6 +856,37 @@ test.describe("NAV-R9 the black screen", () => {
 
     await expect(page.getByTestId("black-screen")).toBeVisible();
   });
+
+  test("NAV-R9.9 leaving the deck and coming back ends the black screen", async ({
+    page,
+    staticServerUrl,
+  }) => {
+    await openSiteDeck(page, staticServerUrl, "範例");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("b");
+    await expect(page.getByTestId("black-screen")).toBeVisible();
+    await recordPageShowPersisted(page);
+
+    await page.goBack();
+    await expect(page).toHaveURL(staticServerUrl);
+    await page.goForward();
+
+    await expectSlide(page, "Agenda");
+    await expect(page.getByTestId("black-screen")).toHaveCount(0);
+    await annotateBackForwardCache(page);
+  });
+
+  test("NAV-R9.10 reloading ends the black screen", async ({ page }) => {
+    await openDeck(page, "example");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("b");
+    await expect(page.getByTestId("black-screen")).toBeVisible();
+
+    await page.reload();
+
+    await expectSlide(page, "Agenda");
+    await expect(page.getByTestId("black-screen")).toHaveCount(0);
+  });
 });
 
 test.describe("NAV-R10 fullscreen", () => {
@@ -893,7 +986,7 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreen(page, true);
   });
 
-  test("NAV-R11.6 Tab focuses the button, which stays shown and takes Space", async ({
+  test("NAV-R11.6 Tab reaches the overview button, then the fullscreen button, which takes Space", async ({
     page,
     browserName,
   }) => {
@@ -903,10 +996,16 @@ test.describe("NAV-R11 the fullscreen button", () => {
     await expectFullscreenButtonShown(page, false);
 
     // Like Safari, WebKit's Tab skips buttons unless Option (Alt) is held.
-    await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
+    const tabKey = browserName === "webkit" ? "Alt+Tab" : "Tab";
+    await page.keyboard.press(tabKey);
+    await expect(getOverviewButton(page)).toBeFocused();
+    await page.keyboard.press(tabKey);
+    await expect(getFullscreenButton(page)).toBeFocused();
     await expectFullscreenButtonShown(page, true);
+    await expect(getOverviewButton(page)).toHaveCSS("opacity", "1");
     await page.clock.runFor(2000);
     await expectFullscreenButtonShown(page, true);
+    await expect(getOverviewButton(page)).toHaveCSS("opacity", "1");
     await page.keyboard.press("Space");
 
     await expectFullscreen(page, true);
@@ -1024,7 +1123,96 @@ test.describe("NAV-R14 holding a key down", () => {
 
     await expectFullscreen(page, true);
   });
+
+  test("NAV-R14.4 holding Enter in the overview stops at the chosen slide's step 0", async ({
+    page,
+  }) => {
+    await openDeck(page, "demo");
+    await page.keyboard.press("g");
+    await page.keyboard.press("ArrowRight");
+    await expectSelection(page, 2);
+
+    await holdKey(page, "Enter", 3);
+
+    await expectOverviewClosed(page);
+    await expectSlideToStay(page, "List");
+    await expect(page).toHaveURL(/#\/list$/);
+  });
+
+  test("NAV-R14.5 holding Enter after a page number in the overview stops at step 0", async ({
+    page,
+  }) => {
+    await openDeck(page, "demo");
+    await page.keyboard.press("g");
+    await expectOverviewOpen(page);
+
+    await page.keyboard.press("2");
+    await holdKey(page, "Enter", 3);
+
+    await expectOverviewClosed(page);
+    await expectSlideToStay(page, "List");
+    await expect(page).toHaveURL(/#\/list$/);
+  });
+
+  test("NAV-R14.6 holding Enter without the overview keeps moving forward", async ({
+    page,
+  }) => {
+    await openDeck(page, "example");
+
+    await holdKey(page, "Enter", 1);
+
+    await expectSlide(page, "Summary");
+  });
+
+  test("NAV-R14.7 opening the overview while holding Enter stops the repeats", async ({
+    page,
+  }) => {
+    await openDeck(page, "annual-review");
+    await page.mouse.move(100, 100);
+
+    await page.keyboard.down("Enter");
+    await expectSlide(page, "Agenda");
+    await getOverviewButton(page).click();
+    await expectOverviewOpen(page);
+    await page.keyboard.down("Enter");
+    await page.keyboard.down("Enter");
+    await page.keyboard.up("Enter");
+
+    await expectOverviewOpen(page);
+    await expectSelection(page, 2);
+  });
+
+  test("NAV-R14.8 holding Enter in the overview keeps the repeats from an autoFocus field", async ({
+    page,
+  }) => {
+    await openDeck(page, "autofocus");
+    await page.keyboard.press("g");
+    await page.keyboard.press("ArrowRight");
+    await expectSelection(page, 2);
+
+    await holdKey(page, "Enter", 3);
+
+    await expectOverviewClosed(page);
+    await expectSlide(page, "Repl");
+    const code = getCanvas(page).getByRole("textbox", { name: "Code" });
+    await expect(code).toBeFocused();
+    await expect(code).toHaveValue("");
+  });
 });
+
+function getOverviewButton(page: Page): Locator {
+  return page.getByRole("button", { name: /總覽$/ });
+}
+
+function getFullscreenButton(page: Page): Locator {
+  return page.getByRole("button", { name: /全螢幕$/ });
+}
+
+/** Waits a moment for a slide change, then checks that none happened. */
+async function expectSlideToStay(page: Page, heading: string): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  await expectSlide(page, heading);
+}
 
 /**
  * Installs a paused fake clock before the deck opens, so the player's timers, including

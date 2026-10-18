@@ -7,16 +7,23 @@ import {
   collectConsoleMessages,
   copySlidetray,
   E2E_OUTPUT,
+  expectDeckStarted,
+  expectOverviewClosed,
+  expectOverviewOpen,
   expectPresenterSlide,
   expectSlide,
   getElapsedTime,
+  getOverview,
   getPresenterAlert,
   getPresenterPane,
+  getThumbnail,
   holdKey,
-  makeDeckUrl,
   makeFileUrl,
   openDeck,
+  openDeckAt,
   openPresenter,
+  openSiteDeck,
+  openSlidetray,
   recordFocusCalls,
   setDocumentHidden,
   simulateRebuild,
@@ -566,6 +573,28 @@ test.describe("PRES-R3 operating the deck from the presenter window", () => {
     await presenter.keyboard.press("Enter");
 
     await expect(presenter.getByTestId("presenter-page-number")).toBeHidden();
+    await expectSlide(page, "Intro");
+  });
+
+  test("PRES-R3.32 opening the overview in the audience window cancels the presenter window's page number", async ({
+    page,
+  }) => {
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+
+    await presenter.keyboard.press("3");
+    await expect(presenter.getByTestId("presenter-page-number")).toHaveText("3");
+    await page.bringToFront();
+    await page.keyboard.press("g");
+    await expectOverviewOpen(page);
+    await expectOverviewOpen(presenter);
+    await expect(presenter.getByTestId("presenter-page-number")).toHaveCount(0);
+    await presenter.bringToFront();
+    await getOverview(presenter).click({ position: { x: 5, y: 5 } });
+    await presenter.keyboard.press("Enter");
+
+    await expectOverviewClosed(page);
+    await expectOverviewClosed(presenter);
     await expectSlide(page, "Intro");
   });
 });
@@ -1333,6 +1362,45 @@ test.describe("PRES-R9 the elapsed time", () => {
 
     await expectPresenterSlide(presenter, "current", "Agenda");
     await expect(getElapsedTime(presenter)).toHaveText("未開始");
+  });
+
+  test("PRES-R9.21 moving the selection in the overview does not start the elapsed time", async ({
+    page,
+  }) => {
+    await installPausedClock(page);
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+    await expect(getElapsedTime(presenter)).toHaveText("未開始");
+
+    await presenter.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    await presenter.keyboard.press("ArrowRight");
+    await expect(getThumbnail(presenter, 2)).toHaveAttribute("data-selected");
+    await presenter.keyboard.press("g");
+    await expectOverviewClosed(presenter);
+    await page.clock.fastForward(5000);
+
+    await expectSlide(page, "Intro");
+    await expect(getElapsedTime(presenter)).toHaveText("未開始");
+  });
+
+  test("PRES-R9.22 a jump from the overview starts the elapsed time", async ({
+    page,
+  }) => {
+    await installPausedClock(page);
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+
+    await presenter.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    await presenter.keyboard.press("ArrowRight");
+    await expect(getThumbnail(presenter, 2)).toHaveAttribute("data-selected");
+    await presenter.keyboard.press("Enter");
+    await waitForElapsedTimeToStart(presenter);
+    await page.clock.fastForward(5000);
+
+    await expectSlide(page, "Agenda");
+    await expect(getElapsedTime(presenter)).toHaveText("00:05");
   });
 });
 
@@ -2234,42 +2302,12 @@ const VERSION_MISMATCH_NOTICE =
  * Opens a deck at a slide and step. Opens the first slide first, so the player is listening
  * for keys by the time the hash changes.
  */
-async function openDeckAt(page: Page, deckId: string, hash: string): Promise<void> {
-  await openDeck(page, deckId);
-  await page.goto(makeDeckUrl(deckId, hash));
-  await expect.poll(() => new URL(page.url()).hash).toBe(hash);
-}
-
 async function openServedDeck(
   page: Page,
   staticServerUrl: string,
   deckId: string,
 ): Promise<void> {
   await page.goto(`${staticServerUrl}${deckId}/`);
-  await expect(page).toHaveURL(/#\/intro$/);
-}
-
-async function openSlidetray(page: Page, slidetrayDirectory: string): Promise<void> {
-  await page.goto(makeFileUrl(path.join(slidetrayDirectory, "index.html")));
-  await expect(page).toHaveURL(/#\/intro$/);
-}
-
-/** Opens a deck from the site's home page, so the back button leaves the deck. */
-async function openSiteDeck(
-  page: Page,
-  staticServerUrl: string,
-  title: string,
-): Promise<void> {
-  await page.goto(staticServerUrl);
-  await page.getByRole("link", { name: title }).click();
-  await expectDeckStarted(page);
-}
-
-/**
- * Waits until the player shows the first slide and listens for keys, which it starts in the
- * same effect that writes the first slide's hash.
- */
-async function expectDeckStarted(page: Page): Promise<void> {
   await expect(page).toHaveURL(/#\/intro$/);
 }
 

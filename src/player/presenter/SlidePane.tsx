@@ -1,22 +1,21 @@
-import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode, Ref } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Slide } from "virtual:deck";
 
-import type { StepContextValue } from "../../framework/step-context";
-import { StepContext } from "../../framework/step-context";
-import { ScaledCanvas } from "../Canvas";
+import { SlideCopy } from "../SlideCopy";
 
 /**
  * Renders the presenter window's own copy of a slide at a step, scaled to fit the pane
- * (PRES-R5). The copy is inert, so the speaker cannot click into it, and nothing in it takes
- * focus, even with `autoFocus` or `focus()` (PRES-R6).
+ * (PRES-R5). `ref` is the pane, which the overview zooms in the presenter window (OVW-R21).
  */
 export function SlidePane({
+  ref,
   slide,
   step,
   testId,
   overlay,
 }: {
+  ref?: Ref<HTMLDivElement>;
   slide: Slide;
   step: number;
   testId: string;
@@ -24,12 +23,6 @@ export function SlidePane({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
-  // The audience window already settled the step, and its step count is what counts, so the
-  // copy registers its steps nowhere.
-  const stepContext = useMemo<StepContextValue>(
-    () => ({ slideId: slide.id, step, isResolving: false, registerSteps: ignoreSteps }),
-    [slide.id, step],
-  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -42,27 +35,19 @@ export function SlidePane({
     return () => observer.disconnect();
   }, []);
 
-  const { Component } = slide;
   return (
-    <div
-      ref={containerRef}
-      data-testid={testId}
-      className="relative h-full overflow-hidden"
-    >
-      {size !== null && (
-        <ScaledCanvas width={size.width} height={size.height}>
-          <div inert className="absolute inset-0 isolate">
-            <StepContext value={stepContext}>
-              <Component key={slide.id} />
-            </StepContext>
-          </div>
-        </ScaledCanvas>
-      )}
+    <div ref={ref} data-testid={testId} className="relative h-full origin-top-left">
+      <div ref={containerRef} className="absolute inset-0 overflow-hidden">
+        {size !== null && (
+          <SlideCopy
+            slide={slide}
+            step={step}
+            width={size.width}
+            height={size.height}
+          />
+        )}
+      </div>
       {overlay}
     </div>
   );
-}
-
-function ignoreSteps(): () => void {
-  return () => {};
 }

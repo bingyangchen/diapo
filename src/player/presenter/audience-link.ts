@@ -183,6 +183,10 @@ export function useAudienceLink({
   const slideIndex = position?.slideIndex;
   const step = position?.step;
   const isBlackScreen = position?.isBlackScreen;
+  const overview = position?.overview ?? null;
+  const isOverviewOpen = overview !== null;
+  const selectedSlideIndex = overview?.selectedSlideIndex;
+  const arrowKeyCount = overview?.arrowKeyCount;
   useEffect(() => {
     if (position !== null) startElapsedTimeOnMove(position);
     // Runs on a settled change of slide or step only, not on a step count change (PRES-R9).
@@ -191,7 +195,17 @@ export function useAudienceLink({
 
   useEffect(() => {
     postState();
-  }, [slideIndex, step, stepCount, isBlackScreen, isHidden, elapsedStartTime]);
+  }, [
+    slideIndex,
+    step,
+    stepCount,
+    isBlackScreen,
+    isOverviewOpen,
+    selectedSlideIndex,
+    arrowKeyCount,
+    isHidden,
+    elapsedStartTime,
+  ]);
 
   return {
     openPresenterWindow() {

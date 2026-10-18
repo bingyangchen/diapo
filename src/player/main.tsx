@@ -5,8 +5,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import deck from "virtual:deck";
 
+import { captureKeys } from "./key-capture";
 import { Player } from "./Player";
-import { captureKeys } from "./presenter/keyboard";
 import { Presenter, PresenterUnavailable } from "./presenter/Presenter";
 
 const rootElement = document.getElementById("root");
@@ -20,6 +20,9 @@ createRoot(rootElement).render(<StrictMode>{makeApp()}</StrictMode>);
  */
 function makeApp(): ReactNode {
   if (!new URLSearchParams(window.location.search).has("presenter")) {
+    // Before React renders any slide, so the player sees every key first while the overview
+    // is open (OVW-R10).
+    captureKeys();
     return <Player deck={deck} />;
   }
   const audienceWindow = window.opener as Window | null;
