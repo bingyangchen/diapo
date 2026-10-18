@@ -134,13 +134,16 @@ While a deck plays, the URL hash names the current slide and step (`#/intro`, or
 | Go to slide _n_ | Type _n_, then Enter |
 | Black screen | B or . |
 | Fullscreen | F, F5, or the button in the bottom-right corner |
+| Overview | G, or the overview button in the bottom-right corner |
 | Presenter window | S |
 
-After Home, End, or a typed slide number, the browser's back button returns to the slide and step you jumped from.
+After Home, End, a typed slide number, or a slide chosen in the overview, the browser's back button returns to the slide and step you jumped from.
+
+The overview shows every slide as a thumbnail of its last step, four to a row. Move the selection with the arrow keys and press Enter, click a thumbnail, or type a slide number and press Enter to jump to that slide's first step; G or the button closes the overview without jumping. While the overview is open, use the keyboard, the mouse, or touch: a presenter remote's Page Up and Page Down only scroll the overview, and its black screen key does nothing. The full rules are in `docs/specs/overview.md`.
 
 ### Presenter Mode
 
-Press S in the window that plays the deck to open the presenter window, which shows the current slide, the next step, the next slide, the speaker notes, the elapsed time, and the time of day. Keys and the presenter remote work in either window, and both windows follow the same slide; after either window reloads, they reconnect on their own.
+Press S in the window that plays the deck to open the presenter window, which shows the current slide, the next step, the next slide, the speaker notes, the elapsed time, and the time of day. Keys and the presenter remote work in either window, and both windows follow the same slide and share the overview, so opening it in the presenter window also shows it on the projector; after either window reloads, they reconnect on their own.
 
 1. Connect the projector and set the displays to extend the desktop, not to mirror it. On macOS, keep "Displays have separate Spaces" on in System Settings > Desktop & Dock, or a window going fullscreen on one display blacks out the other.
 2. Press S, then drag the deck window to the projector and press F there. The presenter window stays on your laptop.

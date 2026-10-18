@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
-const CANVAS_WIDTH = 1920;
-const CANVAS_HEIGHT = 1080;
+export const CANVAS_WIDTH = 1920;
+
+export const CANVAS_HEIGHT = 1080;
 
 /** Scales the 1920×1080 canvas to the largest size that fits the window and centers it. */
 export function Canvas({ children }: { children: ReactNode }) {
@@ -42,6 +43,8 @@ export function ScaledCanvas({
   return (
     <div
       data-testid={testId}
+      // Marks the canvas for the overview's zoom, which maps it onto a thumbnail (OVW-R21).
+      data-canvas=""
       className="absolute top-0 left-0 origin-top-left overflow-hidden bg-white text-black"
       style={{
         width: CANVAS_WIDTH,

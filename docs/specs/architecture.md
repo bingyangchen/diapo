@@ -61,6 +61,8 @@
 - Firefox 只讓有焦點的視窗進入全螢幕，所以 E2E test 在沒有焦點的視窗按全螢幕的快捷鍵之前，先呼叫那個視窗的 `page.bringToFront()`。
 - 在 macOS 上，兩個 WebKit process 同時讓彈出視窗進入全螢幕時，WebKit 會 crash；browser context 裡的彈出視窗還在全螢幕時，關閉這個 browser context 也會花掉大部分的 test timeout。所以讓講者視窗進入全螢幕的 E2E test 放在同一個 serial 的 `test.describe` 裡依序執行，每個 test 結束時也先離開全螢幕。
 - `page.clock` 作用在整個 browser context，彈出視窗也用同一個時鐘；網頁重新整理之後，時鐘從重新整理前的時間接著計算。
+- Playwright 的 `getByRole` 這類依角色查詢的 locator，也會找到 `inert` 元素裡的內容，所以 E2E test 查觀眾視窗播放的頁面時，只在畫布裡找，才不會找到總覽的縮圖。
+- Playwright 的 WebKit 收到網頁沒有擋下的 Backspace 時，會回到上一頁，所以總覽開著時按 Backspace 的情境（OVW-R12.8）不在 WebKit 執行 E2E test，改在 Safari 手動檢查。
 - Chromium 的上一頁按鈕會略過標成要略過的瀏覽紀錄（見「講者視窗」一節），但 Playwright 的 `page.goBack()` 與網頁呼叫的 `history.back()` 不會略過，所以 E2E test 要在 Chromium 載入擴充功能，用和上一頁按鈕一樣會略過這些紀錄的 `chrome.tabs.goBack()`，才驗證得了上一頁按鈕的行為。而且 Chromium 把 Playwright 的 `page.evaluate()` 與 locator 的 `textContent()` 這類在網頁裡執行程式的 API 算成使用者操作，呼叫這些 API 之後，Chromium 會取消這些標記。
 
 ## 模組劃分
@@ -113,6 +115,7 @@
 - `src/framework/` 是頁面 import 的元件與 hook，例如 `Step` 與 `useStep`。
 - `src/player/` 是 Vite 的入口 HTML 與播放器。
 - `src/player/presenter/` 是講者模式，包括觀眾視窗與講者視窗之間的連線，以及講者視窗的畫面。
+- `src/player/overview/` 是預覽總覽，包括縮圖、選取框的移動、總覽的捲動位置，以及開關總覽的動畫。
 - `src/site/` 是網站首頁的入口 HTML 與 React 元件。
 
 > 設計理由：網站首頁用 React 與 Vite build，因為 roadmap 的「網站首頁」要沿用簡報的主題，首頁之後一定要經過 Vite build；曾考慮由 build script 直接產生靜態 HTML。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
@@ -127,9 +130,9 @@
 
 ### 播放器的狀態
 
-播放器把目前的頁面與步驟記錄在網址的 hash（NAV-R1、STEP-R11），黑畫面與輸入中的頁碼只存在記憶體。講者模式的經過時間開始計時的時刻（PRES-R9），以及觀眾視窗替講者視窗取的視窗名稱，存在觀眾視窗的 `sessionStorage`，因為 `sessionStorage` 每個分頁各自一份，重新整理之後仍然保留。網站上的簡報屬於同一個 origin，共用同一份 `sessionStorage`，所以經過時間以 deck ID 區分。瀏覽器拒絕存取 `sessionStorage` 時，例如講者封鎖了所有 cookie，播放器照常播放，只是經過時間與視窗名稱在重新整理之後不會保留。播放器不使用 `localStorage`，因為 `localStorage` 在 Chromium 與 WebKit 由所有 `file://` 網頁共用（見「從 `file://` 開啟 Slidetray」）。
+播放器把目前的頁面與步驟記錄在網址的 hash（NAV-R1、STEP-R11），黑畫面、輸入中的頁碼與總覽的狀態，也就是總覽有沒有開著與選取框所在的頁面，只存在觀眾視窗的記憶體。這些狀態與目前的位置由同一個 reducer 管理，所以跳頁時關閉總覽、取消輸入中的頁碼，這類同時改變好幾個狀態的轉換一次完成。觀眾視窗從 back-forward cache 還原時，也就是 `pageshow` 事件的 `persisted` 是 `true` 時，播放器關閉總覽、結束黑畫面並取消輸入中的頁碼，結果和重新載入網頁相同（OVW-R16）。講者模式的經過時間開始計時的時刻（PRES-R9），以及觀眾視窗替講者視窗取的視窗名稱，存在觀眾視窗的 `sessionStorage`，因為 `sessionStorage` 每個分頁各自一份，重新整理之後仍然保留。網站上的簡報屬於同一個 origin，共用同一份 `sessionStorage`，所以經過時間以 deck ID 區分。瀏覽器拒絕存取 `sessionStorage` 時，例如講者封鎖了所有 cookie，播放器照常播放，只是經過時間與視窗名稱在重新整理之後不會保留。播放器不使用 `localStorage`，因為 `localStorage` 在 Chromium 與 WebKit 由所有 `file://` 網頁共用（見「從 `file://` 開啟 Slidetray」）。
 
-播放器用 React context 把目前的步驟交給 `Step` 與 `useStep`，`Step` 與 `useStep` 也透過同一個 context 向播放器登記步驟。頁面只透過這個 context 讀出目前的步驟，所以任何 render 頁面的元件都能提供這個 context，指定頁面顯示哪一步，不必修改頁面。
+播放器用 React context 把目前的步驟交給 `Step` 與 `useStep`，`Step` 與 `useStep` 也透過同一個 context 向播放器登記步驟。頁面只透過這個 context 讀出目前的步驟，所以任何 render 頁面的元件都能提供這個 context，指定頁面顯示哪一步，不必修改頁面，例如講者視窗的三格與總覽的縮圖。Context 的 `mayExceedStepCount` 表示要求的步驟可能超過頁面的步數，這時 `useStep` 回傳要求的步驟與自己參數裡的最大值兩者中較小的那個：播放器校正步驟之前（見下圖），以及縮圖要求 `Infinity`、也就是最後一步的時候。
 
 播放器要等頁面 render 之後才知道步數（STEP-R5）。從下一頁往回，或 hash 指定了步驟時，播放器先用要求的步驟 render 頁面，也就是往回換頁時的最後一步，或 hash 寫的步驟；接著照下圖，在瀏覽器畫出畫面之前校正步驟。
 
@@ -159,7 +162,7 @@ sequenceDiagram
   participant presenter as 講者視窗
   participant audience as 觀眾視窗
   presenter->>audience: 載入後每 100 毫秒送出連線請求，附上 deck ID 與 build ID，直到觀眾視窗回覆
-  audience->>presenter: 回覆目前的狀態：頁面、步驟、步數、黑畫面、分頁在不在前景、經過時間開始計時的時刻、deck ID 與 build ID
+  audience->>presenter: 回覆目前的狀態：頁面、步驟、步數、黑畫面、總覽、分頁在不在前景、經過時間開始計時的時刻、deck ID 與 build ID
   Note over presenter: 講者按 →
   presenter->>audience: 下一步
   Note over audience: 照 STEP-R9 前進一步，改寫 hash
@@ -189,7 +192,7 @@ stateDiagram-v2
 
 > 設計理由：觀眾視窗重新載入簡報之後，講者要先點一下觀眾視窗的畫面，點上一頁按鈕才會回到跳頁之前的頁面，PRES-R3 把這個情況寫成已知限制。曾考慮由講者視窗直接改觀眾視窗的網址，讓 Chromium 把講者在講者視窗按下的按鍵算成新增瀏覽紀錄時的使用者操作，但實測 Chromium 的上一頁按鈕仍然略過跳頁之前的頁面。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
 
-連線請求一律由講者視窗送出，因為觀眾視窗沒辦法在載入時用 `window.open('', name)` 找講者視窗：講者視窗不存在時，Chromium 與 Firefox 會擋下這個彈出視窗，沒擋的瀏覽器則會多開一個空白視窗。連線時兩個視窗比對 deck ID 與 build ID，deck ID 不同時，講者視窗關掉自己（PRES-R13）；build ID 不同時，講者視窗照 PRES-R12 顯示版本不同的提示。`diapo:deck` plugin 每次 build 與每次啟動 dev server 時都產生新的 build ID，寫進 `virtual:deck`。
+連線請求一律由講者視窗送出，因為觀眾視窗沒辦法在載入時用 `window.open('', name)` 找講者視窗：講者視窗不存在時，Chromium 與 Firefox 會擋下這個彈出視窗，沒擋的瀏覽器則會多開一個空白視窗。連線時兩個視窗比對 deck ID 與 build ID，deck ID 不同時，講者視窗關掉自己（PRES-R13）；build ID 不同時，講者視窗照 PRES-R12 顯示版本不同的提示。`diapo:deck` plugin 每次 build 與每次啟動 dev server 時都產生新的 build ID，寫進 `virtual:deck`。`make dev` 執行中改了 `deck.json` 時，build ID 不變，但兩個視窗重新載入的時間不同，先重新載入的講者視窗可能收到它的簡報已經沒有的頁面，所以觀眾視窗傳來的頁面或選取框超出講者視窗的頁數時，講者視窗也當成版本不同。
 
 連線另有以下規則：
 
@@ -220,6 +223,45 @@ flowchart TD
 > 設計理由：講者視窗不會定時確認觀眾視窗有沒有回應。曾考慮讓講者視窗每秒向觀眾視窗送出確認，超過 2 秒沒有收到回覆就當成連線中斷，但觀眾視窗卡住或 crash 時，講者視窗自己也跟著停住或 crash，沒辦法顯示連線中斷。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
 
 講者視窗另外 render 目前頁、下一步與下一頁，其中目前頁與下一步是同一頁的兩份，所以目前這一頁的 effect 會在講者視窗再執行兩次，下一頁的 effect 也會在觀眾視窗換到下一頁之前，就先在講者視窗執行，所以講者視窗裡的影片聲音與圖表動畫，留給之後「圖片與影片」與「ECharts 圖表」的 plan 處理。講者視窗替這三份頁面各自提供步驟的 context，指定要顯示哪一步，但不記錄頁面登記的步驟，因為步數以觀眾視窗傳回的為準。這三份頁面放在 `inert` 的元素裡，所以講者點不到，裡面的元素也不會取得焦點；講者視窗在 render 任何頁面之前，就在 window 的 capture 階段攔下所有 keydown、keyup 與 keypress，處理完之後停止傳遞，所以講者視窗裡的頁面收不到鍵盤事件（PRES-R6）。資訊列的時鐘與經過時間各自在自己的元件裡每 200 毫秒更新，講者視窗的其他部分，包括三份頁面，不會跟著重新 render。
+
+### 總覽
+
+兩個視窗用同一個 `Overview` 元件顯示總覽。總覽的狀態以觀眾視窗為準（OVW-R17）：講者在講者視窗按 `G`、方向鍵、Enter 或點縮圖時，講者視窗把這些操作轉成指令送給觀眾視窗，再顯示觀眾視窗傳回的狀態，流程和換頁相同。
+
+```mermaid
+sequenceDiagram
+  participant presenter as 講者視窗
+  participant audience as 觀眾視窗
+  Note over presenter: 講者按 G
+  presenter->>audience: 開啟總覽
+  Note over audience: 開啟總覽，選取框停在目前的頁面
+  audience->>presenter: 送出目前的狀態，包括總覽開著、選取框所在的頁面與方向鍵的序號
+  Note over presenter: 講者按 →
+  presenter->>audience: 移動選取框
+  audience->>presenter: 送出目前的狀態
+  Note over presenter: 講者按 Enter
+  presenter->>audience: 跳到選取框所在的頁面
+  Note over audience: 照 OVW-R8 跳頁，關閉總覽，新增瀏覽紀錄
+  audience->>presenter: 送出目前的狀態
+```
+
+兩個視窗各自記錄自己的捲動位置，不互相傳送（OVW-R18）。觀眾視窗替方向鍵記一個序號：講者在任一個視窗按方向鍵時，序號加 1，選取框沒有移動時也一樣。每個視窗看到序號改變時，各自照 OVW-R7 判斷要不要捲到選取框。觀眾視窗重新整理之後序號重新開始，所以講者視窗比的是「不同」，不是「比較大」；講者視窗每次連上或恢復連線時，也捲到選取框，並直接顯示觀眾視窗當時的狀態，不播放開關總覽的動畫（OVW-R21）。
+
+總覽開著時，觀眾視窗比照講者視窗，在 window 的 capture 階段攔下 keydown、keyup 與 keypress，處理完之後停止傳遞，所以總覽底下的頁面與縮圖都收不到鍵盤事件（OVW-R10）。這幾個 listener 和講者視窗一樣在 render 任何頁面之前就加上，所以排在頁面自己加在 window 的 capture listener 之前；總覽沒有開著時，觀眾視窗的 listener 只擋下 NAV-R14 列出的自動重複的 Enter，其他按鍵照常交給頁面。總覽底下的頁面放在 `inert` 的元素裡；講者視窗開著總覽時，資訊列、三格與備註區也都放在 `inert` 的元素裡。
+
+總覽開著時，總覽本身取得焦點，所以交給瀏覽器的按鍵（OVW-R12），例如 Space、PageDown 與 End，捲動的是總覽，不是講者先點過的備註區或頁面上的元素（OVW-R18）。Firefox 有時在總覽剛 mount 時不讓它取得焦點，所以總覽在下一個 frame 再確認一次；講者切回這個視窗時也再確認一次。
+
+> 設計理由：總覽開著時讓總覽本身取得焦點，因為在 Chromium、Firefox、WebKit 實測，沒有元素取得焦點時，Space、PageDown 與 End 都不會捲動用 `position: fixed` 疊在畫面上的總覽。曾考慮總覽開著時改由整份文件捲動，但要把 `html` 與 `body` 的高度與 `overflow` 改掉，講者先點過的備註區也要另外設成 `overflow: hidden`，否則 Space 會捲動備註區；也考慮過由播放器自己處理這些按鍵，但這樣它們就不是 OVW-R12 交給瀏覽器的按鍵，捲動的距離與平滑捲動也要自己實作。完整討論見 [0005](../plans/archive/0005-overview.md)。
+
+縮圖和講者視窗的三格一樣，是放在 `inert` 元素裡的另一份頁面，播放器替它提供步驟的 context，要求的步驟是 `Infinity`，但不記錄縮圖登記的步驟，所以縮圖不必先知道步數就能顯示最後一步，也不影響目前頁面的步數。總覽用 `IntersectionObserver` 決定要 render 哪些縮圖，範圍是總覽的視窗上下各多一個視窗的高度；範圍外的縮圖只顯示空白的框與頁碼。
+
+> 設計理由：縮圖離視窗不到一個視窗的高度時才 render，離得更遠時就移除，所以不論簡報有幾頁，同時 render 的縮圖都只有大約 3 個視窗的份量，捲出範圍的縮圖也會停止執行 effect。曾考慮開啟總覽時一次 render 所有縮圖，但 80 頁的簡報開啟總覽時，兩個視窗要同時 render 160 份頁面，而兩個視窗共用同一個執行緒，觀眾視窗會卡住一段時間；也考慮過縮圖捲進畫面才 render、之後保留到總覽關閉，但講者捲過整份簡報之後，工作量就和一次 render 全部相同。代價是講者快速捲動時，可能短暫看到空白的框，捲回看過的縮圖時，那一頁會重新 render。完整討論見 [0005](../plans/archive/0005-overview.md)。
+
+縮圖與總覽底下的頁面都會執行 effect，所以有影片或計時器的頁面，在總覽開著時會同時有好幾份在執行，講者視窗開著時更多。縮圖裡與總覽底下的頁面裡，影片的聲音與圖表的動畫要怎麼處理，留給之後「圖片與影片」與「ECharts 圖表」的 plan 決定。
+
+總覽把捲動位置記成總覽的上緣切在第幾列的什麼位置（OVW-R4）。總覽用 `ResizeObserver` 偵測自己與縮圖的大小改變，改變時照記錄的位置重新捲動；它也記下記錄位置時總覽的大小，大小和記錄時不同的時候收到的 `scroll` 事件，屬於還沒重新捲動的大小改變，不當成講者的捲動。總覽關掉瀏覽器的 scroll anchoring（`overflow-anchor: none`），因為瀏覽器在大小改變時自己調整的捲動位置，會在總覽重新捲動之前送出 `scroll` 事件。
+
+開關總覽的動畫用瀏覽器的 Web Animations API，改變畫面上那一頁的 `transform` 與總覽的 `opacity`，不另外安裝 library。動畫播放途中，那一頁暫時疊在總覽上面。播放器的狀態在講者操作時立刻改變，動畫只改變畫面（OVW-R24）；新的動畫從前一個動畫播到的位置開始。減少動態效果的設定用 `matchMedia('(prefers-reduced-motion: reduce)')` 判斷。
 
 ### 講者備註
 

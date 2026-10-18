@@ -2,18 +2,22 @@ import { createContext, useContext, useLayoutEffect } from "react";
 
 export type StepContextValue = {
   slideId: string;
-  /** The step to show. While `isResolving`, it may exceed the slide's step count, or be Infinity. */
+  /**
+   * The step to show. While `mayExceedStepCount`, it may exceed the slide's step count, or be
+   * Infinity for the last step.
+   */
   step: number;
   /**
-   * Whether the slide renders only so the player can learn its step count (STEP-R5) before
-   * the browser paints.
+   * Whether `step` is a step asked for rather than one the slide is known to have: while the
+   * player checks the step count before the browser paints (STEP-R5), and in an overview
+   * thumbnail, which shows the last step (OVW-R6).
    */
-  isResolving: boolean;
+  mayExceedStepCount: boolean;
   /** Registers the steps at which a component changes and returns a function that unregisters them. */
   registerSteps: (steps: readonly number[]) => () => void;
 };
 
-/** Provided by whatever renders a slide: the player now, the overview or PDF export later. */
+/** Provided by whatever renders a slide: the player, the presenter window, the overview. */
 export const StepContext = createContext<StepContextValue | null>(null);
 
 export function isValidStep(step: number): boolean {

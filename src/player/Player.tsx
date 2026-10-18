@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
 } from "react";
 import { flushSync } from "react-dom";
@@ -13,58 +14,32 @@ import type { StepContextValue } from "../framework/step-context";
 import { getStepCount, isValidStep, StepContext } from "../framework/step-context";
 import { useActivity } from "./activity";
 import { Canvas } from "./Canvas";
-import {
-  enterFullscreen,
-  isFullscreen,
-  isFullscreenSupported,
-  toggleFullscreen,
-} from "./fullscreen";
-import { FullscreenButton } from "./FullscreenButton";
+import { enterFullscreen, isFullscreen, toggleFullscreen } from "./fullscreen";
+import { useKeyCapture } from "./key-capture";
+import { Overview } from "./overview/Overview";
+import type { SelectionDirection } from "./overview/selection";
+import { useOverviewTransition } from "./overview/transition";
+import { PageNumber } from "./PageNumber";
+import type { StepCheck } from "./player-state";
+import { makeInitialState, reducePlayerState } from "./player-state";
+import { PlayerButtons } from "./PlayerButtons";
 import type { PlayerCommand } from "./presenter/audience-link";
 import { useAudienceLink } from "./presenter/audience-link";
 import type { AudiencePosition } from "./presenter/protocol";
-import type { Shortcut } from "./shortcuts";
+import type { OverviewShortcut, Shortcut } from "./shortcuts";
 import {
+  getOverviewShortcut,
   getShortcut,
+  isFocusMovingKey,
   isPageNumberInDeck,
   isRepeatable,
+  makeEnterKeyTracker,
   PAGE_NUMBER_TIMEOUT_MS,
 } from "./shortcuts";
 import { makeSlideHash, parseSlideHash } from "./slide-hash";
 import { getEmptyStepRanges, makeStepRegistry } from "./step-registry";
 import type { SwipeDirection } from "./swipe";
 import { useSwipe } from "./swipe";
-
-/**
- * A step the slide may not have, which the player checks against the step count once the
- * slide has rendered. `hash` is the URL hash that asked for the step, or null when the
- * speaker stepped back from the next slide. `previousStep` is the step shown before a check
- * on the same slide, which the checked step may turn out to be; null for another slide.
- */
-type StepCheck = { hash: string | null; previousStep: number | null };
-
-type PlayerState = {
-  slideIndex: number;
-  /**
-   * The step shown. While `stepCheck` is set, it is the step asked for instead, which may
-   * exceed the slide's step count, or be Infinity for the last step.
-   */
-  step: number;
-  stepCheck: StepCheck | null;
-  isBlackScreen: boolean;
-  /** The page number the speaker is typing (NAV-R5); empty when not typing. */
-  pageNumberDigits: string;
-};
-
-type PlayerAction =
-  | { type: "show-step"; slideIndex: number; step: number }
-  | { type: "check-step"; slideIndex: number; step: number; hash: string | null }
-  | { type: "resolve-step"; step: number }
-  | { type: "toggle-black-screen" }
-  | { type: "end-black-screen" }
-  | { type: "type-page-number-digit"; digit: string }
-  | { type: "delete-page-number-digit" }
-  | { type: "cancel-page-number" };
 
 /**
  * Plays a deck. The URL hash is the source of truth for the current slide and step: links on
@@ -77,8 +52,11 @@ type PlayerAction =
  * last step when stepping back (STEP-R9) or a step from the hash (STEP-R12), the player
  * renders the slide first and corrects the step in a layout effect, before the browser paints.
  *
+ * The overview covers the slide without unmounting it (OVW-R10). While it is open, the player
+ * takes every key before the slide sees it, through `captureKeys` (OVW-R10).
+ *
  * This window is the audience window of presenter mode, and the source of truth for the
- * presenter window it opens with `S` (PRES-R1, PRES-R2).
+ * presenter window it opens with `S` (PRES-R1, PRES-R2), including the overview (OVW-R17).
  */
 export function Player({ deck }: { deck: Deck }) {
   const slideIds = deck.slides.map((slide) => slide.id);
@@ -88,14 +66,23 @@ export function Player({ deck }: { deck: Deck }) {
     makeInitialState,
   );
   const [stepRegistry] = useState(makeStepRegistry);
+  // Changes when the back-forward cache restores the page, which closes the overview without
+  // animation (OVW-R21).
+  const [restoreCount, setRestoreCount] = useState(0);
   const { isUserActive, reportActivity } = useActivity();
+  const slideLayerRef = useRef<HTMLDivElement>(null);
+  const overviewRef = useRef<HTMLDivElement>(null);
+  const buttonsRef = useRef<HTMLDivElement>(null);
+  const [enterKeyTracker] = useState(makeEnterKeyTracker);
   const slide = getSlide(deck, state.slideIndex);
+  const isOverviewOpen = state.overview !== null;
   const position: AudiencePosition | null =
     state.stepCheck === null
       ? {
           slideIndex: state.slideIndex,
           step: state.step,
           isBlackScreen: state.isBlackScreen,
+          overview: state.overview,
         }
       : null;
   const { openPresenterWindow } = useAudienceLink({
@@ -105,6 +92,13 @@ export function Player({ deck }: { deck: Deck }) {
     // Renders each command before the next message arrives, since a command reads the
     // state, like a second key would (see showStep).
     runCommand: (command) => flushSync(() => runPresenterCommand(command)),
+  });
+  const isOverviewMounted = useOverviewTransition({
+    isOpen: isOverviewOpen,
+    slideIndex: state.slideIndex,
+    slideLayerRef,
+    overviewRef,
+    continuityKey: restoreCount,
   });
 
   function showStep(
@@ -143,6 +137,41 @@ export function Player({ deck }: { deck: Deck }) {
     }
   }
 
+  /** Jumps to a typed page number, which also closes the overview, even on the same slide (OVW-R12). */
+  function goToPage(pageNumber: number): void {
+    if (!isPageNumberInDeck(pageNumber, deck.slides.length)) return;
+    showStep(pageNumber - 1, 0, "push");
+    dispatch({ type: "close-overview" });
+  }
+
+  /**
+   * Goes to a slide chosen in the overview. Choosing the current slide only closes the
+   * overview (OVW-R9); another slide starts at step 0 (OVW-R8), which closes it too.
+   */
+  function goToOverviewSlide(slideIndex: number): void {
+    if (slideIndex === state.slideIndex) dispatch({ type: "close-overview" });
+    else showStep(slideIndex, 0, "push");
+  }
+
+  function moveSelection(direction: SelectionDirection): void {
+    dispatch({ type: "move-selection", direction, slideCount: deck.slides.length });
+  }
+
+  /** Does nothing once the overview has closed, which it may have since the presenter window heard. */
+  function goToSelection(): void {
+    if (state.overview !== null) goToOverviewSlide(state.overview.selectedSlideIndex);
+  }
+
+  function toggleOverview(): void {
+    dispatch({ type: isOverviewOpen ? "close-overview" : "open-overview" });
+  }
+
+  function openPresenter(): void {
+    // Opening a window or bringing one to the front makes browsers leave fullscreen,
+    // which the audience would see (PRES-R1).
+    if (!isFullscreen()) openPresenterWindow();
+  }
+
   function runShortcut(shortcut: Shortcut, key: string): void {
     switch (shortcut) {
       case "next":
@@ -162,10 +191,30 @@ export function Player({ deck }: { deck: Deck }) {
       case "enter-fullscreen":
         return enterFullscreen();
       case "open-presenter":
-        // Opening a window or bringing one to the front makes browsers leave fullscreen,
-        // which the audience would see (PRES-R1).
-        if (!isFullscreen()) openPresenterWindow();
-        return;
+        return openPresenter();
+      case "toggle-overview":
+        return toggleOverview();
+    }
+  }
+
+  function runOverviewShortcut(shortcut: OverviewShortcut, key: string): void {
+    switch (shortcut.type) {
+      case "move-selection":
+        return moveSelection(shortcut.direction);
+      case "go-to-selection":
+        return goToSelection();
+      case "digit":
+        return dispatch({ type: "type-page-number-digit", digit: key });
+      case "delete-page-number-digit":
+        return dispatch({ type: "delete-page-number-digit" });
+      case "toggle-overview":
+        return toggleOverview();
+      case "toggle-fullscreen":
+        return toggleFullscreen();
+      case "enter-fullscreen":
+        return enterFullscreen();
+      case "open-presenter":
+        return openPresenter();
     }
   }
 
@@ -189,16 +238,24 @@ export function Player({ deck }: { deck: Deck }) {
       case "last":
         return showStep(deck.slides.length - 1, 0, "push");
       case "go-to-page":
-        if (isPageNumberInDeck(command.pageNumber, deck.slides.length)) {
-          showStep(command.pageNumber - 1, 0, "push");
-        }
-        return;
+        return goToPage(command.pageNumber);
       case "go-to-hash":
         return goToHash(command.hash);
       case "toggle-black-screen":
         return dispatch({ type: "toggle-black-screen" });
       case "end-black-screen":
         return dispatch({ type: "end-black-screen" });
+      case "open-overview":
+      case "close-overview":
+        return dispatch({ type: command.type });
+      case "move-selection":
+        return moveSelection(command.direction);
+      case "go-to-selection":
+        return goToSelection();
+      // The presenter window's overview may have closed here since it last heard.
+      case "go-to-slide":
+        if (state.overview !== null) goToOverviewSlide(command.slideIndex);
+        return;
     }
   }
 
@@ -305,15 +362,45 @@ export function Player({ deck }: { deck: Deck }) {
       if (event.key === "Backspace")
         return dispatch({ type: "delete-page-number-digit" });
       dispatch({ type: "cancel-page-number" });
-      if (event.key === "Enter") {
-        const pageNumber = Number(state.pageNumberDigits);
-        if (isPageNumberInDeck(pageNumber, deck.slides.length)) {
-          showStep(pageNumber - 1, 0, "push");
-        }
-        return;
-      }
+      if (event.key === "Enter") return goToPage(Number(state.pageNumberDigits));
     }
     runShortcut(shortcut, event.key);
+  });
+
+  /** Follows the flowchart of navigation.md with the overview's shortcuts (OVW-R12). */
+  function handleOverviewKeyDown(event: KeyboardEvent): void {
+    // Keeps focus off the buttons and the address bar (OVW-R11).
+    if (isFocusMovingKey(event)) return event.preventDefault();
+    const shortcut = getOverviewShortcut(event, {
+      isTypingPageNumber: state.pageNumberDigits !== "",
+    });
+    if (shortcut === null) return;
+    event.preventDefault();
+    if (event.repeat && !isRepeatable(shortcut.type)) return;
+    if (state.pageNumberDigits !== "") {
+      if (shortcut.type === "digit" || shortcut.type === "delete-page-number-digit") {
+        return runOverviewShortcut(shortcut, event.key);
+      }
+      dispatch({ type: "cancel-page-number" });
+      if (shortcut.type === "go-to-selection") {
+        return goToPage(Number(state.pageNumberDigits));
+      }
+    }
+    runOverviewShortcut(shortcut, event.key);
+  }
+
+  useKeyCapture((event) => {
+    enterKeyTracker.track(event, isOverviewOpen);
+    if (enterKeyTracker.isSwallowedRepeat(event, isOverviewOpen)) {
+      // Keeps the Enter from the slide and the browser too, such as a text field that took
+      // focus on the slide the Enter jumped to (NAV-R14).
+      event.preventDefault();
+      return true;
+    }
+    if (event.type !== "keydown") return isOverviewOpen;
+    if (!isOverviewOpen) return false;
+    handleOverviewKeyDown(event);
+    return true;
   });
 
   // The slide's own layout effects register its steps before these run. Checks the steps
@@ -334,14 +421,26 @@ export function Player({ deck }: { deck: Deck }) {
     function handleWindowKeyDown(event: KeyboardEvent) {
       handleKeyDown(event);
     }
+
+    // Leaving the deck and coming back shows the slide alone, whether the browser loads the
+    // page again or restores it from the back-forward cache (OVW-R16).
+    function handlePageShow(event: PageTransitionEvent) {
+      if (!event.persisted) return;
+      flushSync(() => {
+        setRestoreCount((count) => count + 1);
+        dispatch({ type: "restore-page" });
+      });
+    }
     syncWithHash();
     window.addEventListener("hashchange", handleHashChange);
     // Listens on window, so components on the slide see the keydown first and can claim
     // a key with `preventDefault()` (NAV-R7).
     window.addEventListener("keydown", handleWindowKeyDown);
+    window.addEventListener("pageshow", handlePageShow);
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
       window.removeEventListener("keydown", handleWindowKeyDown);
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
 
@@ -354,8 +453,16 @@ export function Player({ deck }: { deck: Deck }) {
     return () => clearTimeout(timer);
   }, [state.pageNumberDigits]);
 
+  // The buttons stay shown while the overview is open and for 2 seconds after it closes
+  // (OVW-R3). On the first render, this restarts the 2 seconds that the deck starts with.
+  useEffect(() => {
+    if (!isOverviewOpen) reportActivity();
+  }, [isOverviewOpen, reportActivity]);
+
   useSwipe({
     onSwipe: (direction: SwipeDirection) => {
+      // The overview only scrolls under a finger (OVW-R14).
+      if (isOverviewOpen) return;
       if (state.isBlackScreen) return dispatch({ type: "end-black-screen" });
       dispatch({ type: "cancel-page-number" });
       if (direction === "left") goToNextStep();
@@ -368,7 +475,7 @@ export function Player({ deck }: { deck: Deck }) {
     () => ({
       slideId: slide.id,
       step: state.step,
-      isResolving: state.stepCheck !== null,
+      mayExceedStepCount: state.stepCheck !== null,
       registerSteps: stepRegistry.registerSteps,
     }),
     [slide.id, state.step, state.stepCheck, stepRegistry],
@@ -381,118 +488,55 @@ export function Player({ deck }: { deck: Deck }) {
       className="fixed inset-0"
       data-cursor-hidden={isUserActive ? undefined : ""}
     >
-      <Canvas>
-        {/* Isolates the slide's z-indexes, so the black screen stays on top (NAV-R9). */}
-        <div className="absolute inset-0 isolate">
-          <StepContext value={stepContext}>
-            {/* Keyed by slide ID, so a slide that re-exports the previous one still starts
-                over (NAV-R13), while a step change keeps the slide mounted (STEP-R6). */}
-            <Component key={slide.id} />
-          </StepContext>
-        </div>
-        {state.isBlackScreen && (
-          <div data-testid="black-screen" className="absolute inset-0 bg-black" />
-        )}
-      </Canvas>
-      {/* Lets clicks through to the slide wherever the page number and a hidden button sit. */}
-      <div className="pointer-events-none fixed right-4 bottom-4 flex flex-col items-end gap-2">
-        {state.pageNumberDigits !== "" && (
-          <div
-            data-testid="page-number"
-            className="flex h-11 items-center rounded-lg bg-black/40 px-4 font-sans text-2xl text-white tabular-nums"
-          >
-            {state.pageNumberDigits}
+      {/* Inert under the overview, so nothing on the slide takes clicks or focus (OVW-R10). */}
+      <div
+        ref={slideLayerRef}
+        inert={isOverviewOpen}
+        className="fixed inset-0 origin-top-left"
+      >
+        <Canvas>
+          {/* Isolates the slide's z-indexes, so the black screen stays on top (NAV-R9). */}
+          <div className="absolute inset-0 isolate">
+            <StepContext value={stepContext}>
+              {/* Keyed by slide ID, so a slide that re-exports the previous one still starts
+                  over (NAV-R13), while a step change keeps the slide mounted (STEP-R6). */}
+              <Component key={slide.id} />
+            </StepContext>
           </div>
+          {state.isBlackScreen && (
+            <div data-testid="black-screen" className="absolute inset-0 bg-black" />
+          )}
+        </Canvas>
+      </div>
+      {isOverviewMounted && (
+        <Overview
+          ref={overviewRef}
+          slides={deck.slides}
+          currentSlideIndex={state.slideIndex}
+          selectedSlideIndex={state.overview?.selectedSlideIndex ?? null}
+          isOpen={isOverviewOpen}
+          revealKey={state.overview?.arrowKeyCount ?? 0}
+          getCoveredRect={() => buttonsRef.current?.getBoundingClientRect() ?? null}
+          onThumbnailClick={goToOverviewSlide}
+        />
+      )}
+      {/* Lets clicks through wherever the page number and a hidden button sit (OVW-R8). */}
+      <div className="pointer-events-none fixed right-4 bottom-4 z-20 flex flex-col items-end gap-2">
+        {state.pageNumberDigits !== "" && (
+          <PageNumber testId="page-number" digits={state.pageNumberDigits} />
         )}
-        {isFullscreenSupported() && <FullscreenButton isUserActive={isUserActive} />}
+        <PlayerButtons
+          ref={buttonsRef}
+          isVisible={isUserActive || isOverviewOpen}
+          isOverviewOpen={isOverviewOpen}
+          onOverviewClick={() => {
+            if (state.isBlackScreen) dispatch({ type: "end-black-screen" });
+            else toggleOverview();
+          }}
+        />
       </div>
     </div>
   );
-}
-
-function makeInitialState({
-  hash,
-  slideIds,
-}: {
-  hash: string;
-  slideIds: string[];
-}): PlayerState {
-  const parsedHash = parseSlideHash(hash, slideIds);
-  const step = parsedHash?.step ?? 0;
-  return {
-    slideIndex: parsedHash?.slideIndex ?? 0,
-    step,
-    stepCheck: step > 0 ? { hash, previousStep: null } : null,
-    isBlackScreen: false,
-    pageNumberDigits: "",
-  };
-}
-
-function reducePlayerState(state: PlayerState, action: PlayerAction): PlayerState {
-  switch (action.type) {
-    case "show-step":
-      return makeShownState(state, action.slideIndex, action.step, null);
-    case "check-step": {
-      const isSameSlide = action.slideIndex === state.slideIndex;
-      // A check during another check keeps the step shown before the first one.
-      const previousStep = !isSameSlide
-        ? null
-        : state.stepCheck === null
-          ? state.step
-          : state.stepCheck.previousStep;
-      return makeShownState(state, action.slideIndex, action.step, {
-        hash: action.hash,
-        previousStep,
-      });
-    }
-    case "resolve-step": {
-      // Keeps the page number being typed when the checked step is the step shown before,
-      // since then neither the slide nor the step changed (NAV-R5).
-      const isSamePosition = state.stepCheck?.previousStep === action.step;
-      return {
-        ...state,
-        step: action.step,
-        stepCheck: null,
-        pageNumberDigits: isSamePosition ? state.pageNumberDigits : "",
-      };
-    }
-    // Switching the black screen cancels the page number being typed in either window,
-    // including a switch from the presenter window (PRES-R3).
-    case "toggle-black-screen":
-      return { ...state, isBlackScreen: !state.isBlackScreen, pageNumberDigits: "" };
-    case "end-black-screen":
-      return state.isBlackScreen
-        ? { ...state, isBlackScreen: false, pageNumberDigits: "" }
-        : state;
-    case "type-page-number-digit":
-      return { ...state, pageNumberDigits: state.pageNumberDigits + action.digit };
-    case "delete-page-number-digit":
-      return { ...state, pageNumberDigits: state.pageNumberDigits.slice(0, -1) };
-    case "cancel-page-number":
-      return state.pageNumberDigits === "" ? state : { ...state, pageNumberDigits: "" };
-  }
-}
-
-function makeShownState(
-  state: PlayerState,
-  slideIndex: number,
-  step: number,
-  stepCheck: StepCheck | null,
-): PlayerState {
-  const isSamePosition = slideIndex === state.slideIndex && step === state.step;
-  // The step shown has already passed its check, so it needs no other.
-  if (isSamePosition && state.stepCheck === null) return state;
-  // A change of slide or step cancels the page number being typed (NAV-R5) but keeps the
-  // black screen (NAV-R9). A checked step on the same slide may turn out to be the step shown,
-  // so resolve-step decides then.
-  const isPositionPending = stepCheck !== null && stepCheck.previousStep !== null;
-  return {
-    ...state,
-    slideIndex,
-    step,
-    stepCheck,
-    pageNumberDigits: isSamePosition || isPositionPending ? state.pageNumberDigits : "",
-  };
 }
 
 function makeUnknownHashWarning(hash: string): string {

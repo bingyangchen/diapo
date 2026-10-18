@@ -1,3 +1,6 @@
+import type { SelectionDirection } from "../overview/selection";
+import type { OverviewState } from "../player-state";
+
 // Tag the messages each window sends, so the other ignores messages from anything else,
 // such as an iframe on a slide.
 const PRESENTER_TAG = "diapo:presenter";
@@ -11,6 +14,8 @@ export type AudiencePosition = {
   slideIndex: number;
   step: number;
   isBlackScreen: boolean;
+  /** The overview that both windows share, or null while it is closed (OVW-R17). */
+  overview: OverviewState | null;
 };
 
 /** What the audience window shows, which the presenter window mirrors (PRES-R2). */
@@ -33,6 +38,11 @@ export type PresenterCommand =
   | { type: "go-to-hash"; hash: string }
   | { type: "toggle-black-screen" }
   | { type: "end-black-screen" }
+  | { type: "open-overview" }
+  | { type: "close-overview" }
+  | { type: "move-selection"; direction: SelectionDirection }
+  | { type: "go-to-selection" }
+  | { type: "go-to-slide"; slideIndex: number }
   | { type: "start-elapsed-time" }
   | { type: "reset-elapsed-time" };
 

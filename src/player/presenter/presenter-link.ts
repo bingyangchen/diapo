@@ -25,7 +25,10 @@ export type PresenterLinkStatus =
  *
  * `audienceState` is the last state of the same build, which the presenter window keeps
  * showing while the connection is lost (PRES-R12). `onPositionChange` runs when the audience
- * window's slide, step, or black screen changes, or the connection is lost.
+ * window's slide, step, or black screen changes, when its overview opens or closes, or when
+ * the connection is lost. `connectionCount` goes up each time the connection starts or comes
+ * back, when the presenter window shows the audience window's state as it finds it (OVW-R18,
+ * OVW-R21).
  */
 export function usePresenterLink(
   deck: Deck,
@@ -33,10 +36,12 @@ export function usePresenterLink(
 ): {
   status: PresenterLinkStatus;
   audienceState: AudienceState | null;
+  connectionCount: number;
   sendCommand: (command: PresenterCommand) => void;
 } {
   const [status, setStatus] = useState<PresenterLinkStatus>("connecting");
   const [audienceState, setAudienceState] = useState<AudienceState | null>(null);
+  const [connectionCount, setConnectionCount] = useState(0);
 
   const handleAudienceMessage = useEffectEvent(
     (
@@ -56,7 +61,9 @@ export function usePresenterLink(
         window.close();
         return;
       }
-      if (state.buildId !== deck.buildId) {
+      // `make dev` keeps the build ID when `deck.json` changes, so a window that reloads first
+      // may hear of a slide that its deck no longer has.
+      if (state.buildId !== deck.buildId || !isInDeck(state, deck.slides.length)) {
         if (status === "connected") onPositionChange();
         setStatus("version-mismatch");
         return;
@@ -64,10 +71,12 @@ export function usePresenterLink(
       if (
         audienceState?.slideIndex !== state.slideIndex ||
         audienceState.step !== state.step ||
-        audienceState.isBlackScreen !== state.isBlackScreen
+        audienceState.isBlackScreen !== state.isBlackScreen ||
+        (audienceState.overview === null) !== (state.overview === null)
       ) {
         onPositionChange();
       }
+      if (status !== "connected") setConnectionCount((count) => count + 1);
       setStatus("connected");
       setAudienceState(state);
     },
@@ -139,12 +148,18 @@ export function usePresenterLink(
   return {
     status,
     audienceState,
+    connectionCount,
     sendCommand(command) {
       const audienceWindow = getAudienceWindow();
       if (status !== "connected" || audienceWindow === null) return;
       postToAudience(audienceWindow, { type: "command", command });
     },
   };
+}
+
+function isInDeck(state: AudienceState, slideCount: number): boolean {
+  const selectedSlideIndex = state.overview?.selectedSlideIndex ?? 0;
+  return state.slideIndex < slideCount && selectedSlideIndex < slideCount;
 }
 
 function getAudienceWindow(): Window | null {
