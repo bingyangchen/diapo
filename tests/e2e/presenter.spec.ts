@@ -1144,6 +1144,9 @@ test.describe("PRES-R9 the elapsed time", () => {
     await startElapsedTimeAt(page, presenter, "12:34");
 
     await presenter.reload();
+    // Waits for the reloaded window to start its timers, which a paused clock moves only once
+    // they exist.
+    await expect(getElapsedTime(presenter)).toHaveText("12:34");
     await page.clock.fastForward(3000);
 
     await expect(getElapsedTime(presenter)).toHaveText("12:37");
