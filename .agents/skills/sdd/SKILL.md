@@ -32,7 +32,7 @@ Nothing in `docs/specs/` or `roadmap.md` is final. If you see a better approach 
    - Comment-only changes.
    - Patch-level dependency bumps.
    - Doc-only fixes that make `docs/specs/` match current code. Never add new behavior this way.
-   - Roadmap vision edits; adding, splitting, or removing `unplanned` nodes and re-linking their edges; collapsing finished features.
+   - Roadmap vision edits; adding, splitting, or removing `unplanned` nodes and re-linking their edges; removing edges that "Roadmap Conventions" leaves out; collapsing finished features.
    - Edits to AGENTS.md and to this skill.
    - Edits to the positioning, target users, scope, or non-goals in `product.md` that the user explicitly asks for, together with the glossary terms that text uses.
 
@@ -82,7 +82,7 @@ When unsure, take the higher tier.
    - "做法要點" covers only what the user must know before approving: architecture impact, and risky or hard-to-reverse operations (data migration, breaking changes, deploy order). No step-by-step implementation list.
    - "驗證方式" marks every scenario of every added requirement, and every scenario that the plan adds to or modifies in an existing requirement, by scenario ID, with how it will be verified: one or more of `unit`, `integration`, `e2e`, and `手動`. Do not name tests or write manual steps; the implementation does not exist yet. Manual steps go in `tests/manual/` during implementation.
    - "還沒定案的問題" must read 「無」 before asking the user to merge: ask the user each question there, and write each answer into the section it belongs to.
-5. Update `roadmap.md` (see "Roadmap Conventions"): add the node as `approved`, or rename the matching `unplanned` node to `PNNNN`; add edges from `depends_on`; link the plan from the feature's vision section.
+5. Update `roadmap.md` (see "Roadmap Conventions"): add the node as `approved`, or rename the matching `unplanned` node to `PNNNN`; add edges from `depends_on`, except those that "Roadmap Conventions" leaves out; link the plan from the feature's vision section.
 6. Run the spec review (see "Independent Review") with everything in the plan's "Spec 變更" as the changes. Its input is the plan file. Write each finding that holds into "還沒定案的問題" and settle it with the user like any other open question.
 7. Tell the user the plan is ready and wait. When the user instructs a push, commit, push, and open the PR. Title: `[plan NNNN] <English title>`. Body: the plan's "目標" paragraph. Do not link the plan file: the PR's changed files already show it, and GitHub does not resolve relative links in PR descriptions. Then stop and wait for the user to merge.
 
@@ -205,6 +205,7 @@ flowchart TD
 - Labels read `<plan numbers> <name><br/><status>`: the number of every plan the node stands for, separated by `、` (none for an `unplanned` node), then the stage or feature name, then the status as text as well as color: `已完成`, `已核准`, `未規劃`.
 - Copy the three `classDef` lines above verbatim; do not change colors or add classes. They are tuned for both GitHub light and dark themes. Fill level shows progress: dashed outline, solid outline, solid fill.
 - `A --> B` means B depends on A.
+- Draw only direct dependencies: leave out `A --> C` when another path already leads from A to C, as in `A --> B --> C`. That path already implies the order, and the extra edge only adds crossings. After any change to the graph, remove the edges this rule leaves out.
 - Keep `done` nodes until their feature is collapsed.
 - A vision subsection states the feature's goal and scope, then lists its stages in order, linking each stage that has a plan. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Decisions the user has already made for an unplanned stage may be recorded in that stage's line, one sentence each, so they survive until the stage's plan is written. Remove the subsection when every stage is done.
 - If the graph becomes hard to read, collapse each finished feature into one node in a Tier 3 PR. The collapsed node takes over every edge between the feature's plans and nodes outside the feature.

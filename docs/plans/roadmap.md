@@ -31,8 +31,7 @@ flowchart TD
   skill_modify("修改簡報 skill<br/>未規劃"):::unplanned
   skill_convert("轉換既有簡報 skill<br/>未規劃"):::unplanned
   P0001 --> P0002 --> P0003 --> transitions --> magic_move
-  P0003 --> P0005 --> reorder
-  P0004 --> P0005
+  P0004 --> P0005 --> reorder
   P0002 --> annotation
   P0004 --> page_links
   P0003 --> P0004 --> skill_generate
