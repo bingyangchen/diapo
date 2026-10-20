@@ -82,7 +82,7 @@ When unsure, take the higher tier.
    - "做法要點" covers only what the user must know before approving: architecture impact, and risky or hard-to-reverse operations (data migration, breaking changes, deploy order). No step-by-step implementation list.
    - "驗證方式" marks every scenario of every added requirement, and every scenario that the plan adds to or modifies in an existing requirement, by scenario ID, with how it will be verified: one or more of `unit`, `integration`, `e2e`, and `手動`. Do not name tests or write manual steps; the implementation does not exist yet. Manual steps go in `tests/manual/` during implementation.
    - "還沒定案的問題" must read 「無」 before asking the user to merge: ask the user each question there, and write each answer into the section it belongs to.
-5. Update `roadmap.md` (see "Roadmap Conventions"): add the node as `approved`, or rename the matching `unplanned` node to `PNNNN`; add edges from `depends_on`, except those that "Roadmap Conventions" leaves out; link the plan from the feature's vision section.
+5. Update `roadmap.md` (see "Roadmap Conventions"): add the plan to the stage's node, which is the matching `unplanned` node, the node of the stage whose delivered behavior the plan only changes, or a new node; set the node's status; add edges from `depends_on`, except edges within one node and those that "Roadmap Conventions" leaves out; link the plan from the feature's vision section.
 6. Run the spec review (see "Independent Review") with everything in the plan's "Spec 變更" as the changes. Its input is the plan file. Write each finding that holds into "還沒定案的問題" and settle it with the user like any other open question.
 7. Tell the user the plan is ready and wait. When the user instructs a push, commit, push, and open the PR. Title: `[plan NNNN] <English title>`. Body: the plan's "目標" paragraph. Do not link the plan file: the PR's changed files already show it, and GitHub does not resolve relative links in PR descriptions. Then stop and wait for the user to merge.
 
@@ -103,7 +103,7 @@ Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, 
    - Every decision with a "併入" target, written as a rationale (see "Spec Conventions") next to the related requirement or architecture section.
    - The architecture impact from "做法要點", reflected in `architecture.md`.
    - The plan with `status: done`, moved to `docs/plans/archive/`.
-   - `roadmap.md` with the node switched to `done` and the vision section's link pointing to the archive path, as "Roadmap Conventions" describes.
+   - `roadmap.md` with the node's status updated, which is `done` once every plan the node stands for is done, and the vision section's link pointing to the archive path, as "Roadmap Conventions" describes.
 6. Run the code review (see "Independent Review"). Its inputs are the branch's changes and the approved plan as of the plan commit, the last `main` commit that touched the plan file (`git log -1 --format=%H main -- 'docs/plans/NNNN-*.md'`). Give the sub-agent the spec review's checklist as well: it runs the spec review with the spec differences that its code review lists as the changes, and skips the spec review if there are none. If a spec file in the plan's `specs` changed on `main` after the plan commit (`git log <plan commit>..$(git merge-base main HEAD) -- <those files>` lists a commit), tell the sub-agent to add everything in the plan's "Spec 變更" to the changes and to run the spec review even if there are no differences. Fix code that does not match its spec. Before resolving a finding by changing spec'd behavior, ask the user; the outcome is a deviation too. If resolving the findings changes any spec text or code, give every added or changed scenario a test or a `tests/manual/` section, as in step 4, then run all automated tests and `make check-scenarios` again, and rerun every manual check you can run.
 7. Tell the user the work is ready and stop. When the user instructs a push, commit, push, and open the PR. Title: `[impl NNNN] <English title>`. Body: `templates/pr-impl.md`, written against `main` and the approved plan, not the branch's history: describe the final state, and leave out problems that were found and fixed on the branch.
    - The first line links to the approved plan with a full GitHub URL pinned to the plan commit from step 6. A relative link does not resolve in PR descriptions, a link to the impl branch breaks when GitHub deletes the branch on merge, and a link to `main` breaks once the plan moves to the archive.
@@ -127,7 +127,7 @@ First list every plan, on `main` or in an open `[plan NNNN]` PR, whose `depends_
 - If the plan is on `main`:
   1. Close any open `[impl NNNN]` PR. If an `impl/NNNN-*` branch exists locally or on `origin`, tell the user and let them decide whether to delete it; never delete it yourself.
   2. Create branch `abandon/NNNN-slug` from up-to-date `main`. Set `status: abandoned`, add one line under the title stating why and which plan replaces it (if any), and move the file to `docs/plans/archive/`. If the user decided that a plan on `main` only needs its `depends_on` changed, for example from NNNN to the plan that replaces it, edit that `depends_on` on this branch. This changes no behavior, so it needs no separate revision PR.
-  3. In `roadmap.md`, remove the node and its edges, reconnect dependents to the replacing plan if there is one, and update the vision section.
+  3. In `roadmap.md`, if the node stands only for this plan, remove the node and its edges, and reconnect dependents to the replacing plan's node if there is one; otherwise update the node's status. Update the vision section.
   4. Tell the user the change is ready and wait. When the user instructs a push, commit, push, and open a PR titled `[abandon NNNN] <English title>`; then stop.
 
 Make every other revision the user chose outside this procedure. For a plan on `main`, revise it as "Procedure: Plan" describes for an approved plan. For a plan in an open `[plan MMMM]` PR, edit the plan on that PR's branch.
@@ -189,10 +189,10 @@ For a change, the sub-agent also:
 ````markdown
 ```mermaid
 flowchart TD
-  P0005("0005 帳號登入<br/>已完成"):::done
-  P0007("0007 訂閱付款<br/>已核准"):::approved
+  login("帳號登入<br/>已完成"):::done
+  subscription("訂閱付款<br/>已核准"):::approved
   multi_account("OAuth 綁定多帳號<br/>未規劃"):::unplanned
-  P0005 --> P0007 --> multi_account
+  login --> subscription --> multi_account
   classDef done fill:#4f7262,stroke:#4f7262,color:#f7f5f0
   classDef approved fill:none,stroke:#6b8f7e,stroke-width:1.5px
   classDef unplanned fill:none,stroke:#9a978f,stroke-dasharray:3 3
@@ -200,15 +200,17 @@ flowchart TD
 ````
 
 - Use `flowchart TD`. Do not group nodes into subgraphs, because a plan can span several features.
-- Node IDs: `PNNNN` for plans; a temporary snake_case ID for unplanned stages, renamed to `PNNNN` once a plan exists; a snake_case feature ID, with class `done`, for a collapsed finished feature.
+- A node stands for one stage of a feature and for every plan that works on that stage. A plan that only changes behavior the stage already delivered, without adding a capability, joins that stage's node instead of getting its own, as a plan that reverses one of the stage's design decisions does.
+- Node IDs: a snake_case ID that names the stage, chosen when the node is added and kept when plans join it; a snake_case feature ID, with class `done`, for a collapsed finished feature.
 - Use rounded nodes, `("...")`, never square `["..."]`.
-- Labels read `<plan numbers> <name><br/><status>`: the number of every plan the node stands for, separated by `、` (none for an `unplanned` node), then the stage or feature name, then the status as text as well as color: `已完成`, `已核准`, `未規劃`.
+- Labels read `<name><br/><status>`: the stage or feature name, then the status as text as well as color: `已完成`, `已核准`, `未規劃`. Labels carry no plan numbers, because a node can stand for several plans; the vision section links each plan.
+- A node takes the status of its least advanced plan on `main`: `未規劃` while the stage has none, `已核准` while any of its plans is not done, `已完成` once every plan is done.
 - Copy the three `classDef` lines above verbatim; do not change colors or add classes. They are tuned for both GitHub light and dark themes. Fill level shows progress: dashed outline, solid outline, solid fill.
 - `A --> B` means B depends on A.
 - Draw only direct dependencies: leave out `A --> C` when another path already leads from A to C, as in `A --> B --> C`. That path already implies the order, and the extra edge only adds crossings. After any change to the graph, remove the edges this rule leaves out.
 - Keep `done` nodes until their feature is collapsed.
-- A vision subsection states the feature's goal and scope, then lists its stages in order, linking each stage that has a plan. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Decisions the user has already made for an unplanned stage may be recorded in that stage's line, one sentence each, so they survive until the stage's plan is written. Remove the subsection when every stage is done.
-- If the graph becomes hard to read, collapse each finished feature into one node in a Tier 3 PR. The collapsed node takes over every edge between the feature's plans and nodes outside the feature.
+- A vision subsection states the feature's goal and scope, then lists its stages in order, linking every plan of each stage: a stage with one plan links its name, and a stage with several plans names each one after the stage name, as in `預覽總覽（[plan 0005](archive/0005-overview.md)、[plan 0006](0006-overview-in-presenter-window.md)）`. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Decisions the user has already made for an unplanned stage may be recorded in that stage's line, one sentence each, so they survive until the stage's plan is written. Remove the subsection when every stage is done.
+- If the graph becomes hard to read, collapse each finished feature into one node in a Tier 3 PR. The collapsed node takes over every edge between the feature's nodes and nodes outside the feature.
 
 ## Spec Conventions
 

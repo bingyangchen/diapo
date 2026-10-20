@@ -6,16 +6,17 @@
 
 ```mermaid
 flowchart TD
-  P0001("0001 專案地基<br/>已完成"):::done
-  P0002("0002 換頁與操作<br/>已完成"):::done
-  P0003("0003 頁內分步<br/>已完成"):::done
+  foundation("專案地基<br/>已完成"):::done
+  navigation("換頁與操作<br/>已完成"):::done
+  steps("頁內分步<br/>已完成"):::done
   transitions("換頁與進場動畫<br/>未規劃"):::unplanned
   magic_move("Magic Move<br/>未規劃"):::unplanned
-  P0005("0005 預覽總覽<br/>已完成"):::done
-  reorder("排序與隱藏<br/>未規劃"):::unplanned
+  overview("預覽總覽<br/>已核准"):::approved
+  dev_reorder("開發時排序<br/>未規劃"):::unplanned
+  onsite_reorder("現場排序與隱藏<br/>未規劃"):::unplanned
   annotation("畫筆標註<br/>未規劃"):::unplanned
   page_links("頁面裡的連結<br/>未規劃"):::unplanned
-  P0004("0004 講者模式<br/>已完成"):::done
+  presenter_mode("講者模式<br/>已完成"):::done
   theme("主題、亮暗配色與字型<br/>未規劃"):::unplanned
   layouts("版型元件<br/>未規劃"):::unplanned
   media("圖片與影片<br/>未規劃"):::unplanned
@@ -30,23 +31,23 @@ flowchart TD
   token_benchmark("Token 用量比較<br/>未規劃"):::unplanned
   skill_modify("修改簡報 skill<br/>未規劃"):::unplanned
   skill_convert("轉換既有簡報 skill<br/>未規劃"):::unplanned
-  P0001 --> P0002 --> P0003 --> transitions --> magic_move
-  P0004 --> P0005 --> reorder
-  P0002 --> annotation
-  P0004 --> page_links
-  P0003 --> P0004 --> skill_generate
-  P0003 --> pdf_export
-  P0003 --> layout_check
-  P0001 --> theme --> layouts --> layout_check --> skill_generate
+  foundation --> navigation --> steps --> transitions --> magic_move
+  presenter_mode --> overview --> dev_reorder --> onsite_reorder
+  navigation --> annotation
+  presenter_mode --> page_links
+  steps --> presenter_mode --> skill_generate
+  steps --> pdf_export
+  steps --> layout_check
+  foundation --> theme --> layouts --> layout_check --> skill_generate
   skill_generate --> token_benchmark --> skill_modify
   token_benchmark --> skill_convert
-  P0001 --> media --> skill_convert
+  foundation --> media --> skill_convert
   theme --> site_home
   theme --> code_highlight --> magic_move
   theme --> math
   theme --> mermaid_diagram
   theme --> charts
-  P0003 --> charts
+  steps --> charts
   classDef done fill:#4f7262,stroke:#4f7262,color:#f7f5f0
   classDef approved fill:none,stroke:#6b8f7e,stroke-width:1.5px
   classDef unplanned fill:none,stroke:#9a978f,stroke-dasharray:3 3
@@ -62,10 +63,11 @@ flowchart TD
 2. [頁內分步](archive/0003-steps.md)：由播放器統一處理「下一步」，這頁的步驟走完才換頁。網址的 hash 加上第二段記錄目前的步驟（例如 `#/intro/2`）。
 3. 換頁與進場動畫：播放器提供一組預設效果，每一頁用效果的名稱挑選要用哪一種，沒有挑選的頁面套用 `deck.json` 指定的效果。
 4. Magic Move：換頁時，前後兩頁都有的元素從前一頁的位置移動到後一頁的位置，一般元素與程式碼都支援。程式碼的動畫在 build 時先算好，播放時不載入 Shiki。
-5. [預覽總覽](archive/0005-overview.md)：以縮圖列出每一頁，縮圖顯示每頁最後一步的畫面。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。
-6. 排序與隱藏：在總覽拖曳縮圖調整順序。在本機開發時，拖曳排序的結果寫回 `deck.json`；在其他環境，新的順序與隱藏的頁面存在這台電腦的瀏覽器裡，可以還原。
-7. 畫筆標註：在頁面上疊一層 canvas，換頁後清除。
-8. 頁面裡的連結：講者或觀眾點頁面裡的外部連結時，播放簡報的分頁留在原本的頁面。專案擁有者已經做了以下決定，寫 plan 時沿用：
+5. 預覽總覽（[plan 0005](archive/0005-overview.md)、[plan 0006](0006-overview-in-presenter-window.md)）：以縮圖列出每一頁，縮圖顯示每頁最後一步的畫面。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。講者視窗連上時，總覽只顯示在講者視窗，投影幕上繼續顯示目前的頁面。
+6. 開發時排序：在 `make dev` 的總覽裡拖曳縮圖調整順序，dev server 把新的順序寫回 `deck.json`。專案擁有者已經決定只支援用滑鼠與觸控板拖曳，用觸控與鍵盤排序留給「現場排序與隱藏」決定。
+7. 現場排序與隱藏：在 `make dev` 以外的環境，講者在總覽裡拖曳縮圖調整順序、隱藏頁面，新的順序與隱藏的頁面存在這台電腦的瀏覽器裡，可以還原。
+8. 畫筆標註：在頁面上疊一層 canvas，換頁後清除。
+9. 頁面裡的連結：講者或觀眾點頁面裡的外部連結時，播放簡報的分頁留在原本的頁面。專案擁有者已經做了以下決定，寫 plan 時沿用：
    - 外部連結，也就是網址不是 `#` 開頭的連結，開在新的分頁，因為觀眾視窗離開簡報時，講者視窗會斷線，而且觀眾視窗連到回應 `Cross-Origin-Opener-Policy` 的網站時，講者視窗還可能跟著關閉。
    - 播放器只替沒寫 `target` 的外部連結加上 `target="_blank"`，不攔下點擊，所以寫了 `target` 的外部連結、`#` 開頭的連結，以及按著修飾鍵或用滑鼠中鍵點的情況，都照瀏覽器的預設處理。
    - 頁面裡的連結用滑鼠點時不取得焦點，比照 NAV-R11 的全螢幕按鈕，讓講者點過連結之後按 Space 或 Enter 仍然會換頁。
