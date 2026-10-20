@@ -38,9 +38,27 @@ Nothing in `docs/specs/` or `roadmap.md` is final. If you see a better approach 
 
 When unsure, take the higher tier.
 
+The tiers and the life of a Tier 1 plan:
+
+```mermaid
+flowchart TD
+  start("A change to this repo") --> t1q{"Alters spec'd behavior or architecture,<br/>or adds a spec file?"}
+  t1q -- yes --> plan("Tier 1: Procedure: Plan<br/>plan PR")
+  t1q -- no --> t3q{"On the Tier 3 whitelist?"}
+  t3q -- yes --> t3("Tier 3: edit,<br/>open a PR when the user says to push")
+  t3q -- no --> change("Tier 2: Procedure: Change<br/>change PR")
+  plan --> m1{"The user merges the plan PR?"}
+  m1 -- yes --> impl("Procedure: Implement<br/>impl PR")
+  m1 -- "the user drops the plan" --> abandon("Procedure: Abandon")
+  impl --> m2{"The user merges the impl PR?"}
+  m2 -- yes --> done("Plan archived as done")
+  m2 -- "the user drops the plan" --> abandon
+```
+
 ## Rules That Apply Everywhere
 
 - Never push to `main`. Never merge a PR. The user merges; a merge is the user's approval.
+- The diagrams in this skill restate the text around them. Change a diagram in the same edit as that text; where they disagree, the text wins.
 - Commit and push only when the user explicitly instructs it.
 - In a PR body's manual checklist, tick an item only if the latest run of its check passed. Leave an item unticked only if you could not run the check, and state why under the item so the user can run it.
 - Assign every PR you open to the user who directed the work: `gh pr create --assignee @me`, which resolves to the account `gh` is logged in as. If `gh` is logged in as a bot or someone other than that user, ask the user who to assign.
@@ -66,6 +84,22 @@ When unsure, take the higher tier.
 
 ## Procedure: Plan
 
+The steps below, in order:
+
+```mermaid
+flowchart TD
+  read("Read product.md, architecture.md,<br/>affected specs, roadmap.md, open PRs") --> branch("Pick the ID,<br/>create plan/NNNN-slug")
+  branch --> write("Fill in the plan,<br/>settle open questions with the user")
+  write --> roadmap("Update roadmap.md")
+  roadmap --> review("Spec review sub-agent,<br/>substance only")
+  review --> handle("Handle each finding by its label")
+  handle --> changed{"A rule, scenario, or decision changed?"}
+  changed -- yes --> review
+  changed -- no --> wording("Review wording once with a writing skill,<br/>keeping what the text says")
+  wording --> ready("Tell the user the plan is ready")
+  ready --> pr("On the user's instruction, push,<br/>open the plan PR, wait for the merge")
+```
+
 1. Read `product.md`, `architecture.md`, every affected spec, `roadmap.md`, and the output of `gh pr list --state open`.
 2. Pick the ID: take the highest `NNNN` across `docs/plans/**/*.md` and open PR titles (`[plan NNNN]`, `[impl NNNN]`), then add 1. If two plans end up with the same ID, the one merged later renumbers.
 3. Create branch `plan/NNNN-slug` from up-to-date `main`.
@@ -77,20 +111,59 @@ When unsure, take the higher tier.
      - The glossary: each added or modified row.
      - Other text: each changed paragraph, list, table, or diagram as a whole. When its section holds more than one such block, identify the block by the opening words of its current text, never by position such as "the third paragraph": whether a rationale counts as a paragraph is unclear, and positions shift when `main` changes.
 
-     Never copy unchanged text, such as a modified requirement's other scenarios: the copy goes stale if `main` changes that text before the implementation, and applying the plan would then revert it. Wherever only some parts of a requirement or section are written out, state that the rest stays unchanged, such as 「既有的情境與設計理由不變」, so whoever applies the plan does not replace the whole requirement or section with those parts. Never describe an edit inside one of these parts, such as "replace the last two sentences" or "change two nodes of the flowchart". A removed requirement or scenario needs only its ID, a removed glossary row only its term, and a removed paragraph only its opening words.
+     Never copy unchanged text, such as a modified requirement's other scenarios: the copy goes stale if `main` changes that text before the implementation, and applying the plan would then revert it. Wherever only some parts of a requirement or section are written out, state that the rest stays unchanged, such as 「既有的情境與設計理由不變」, so whoever applies the plan does not replace the whole requirement or section with those parts. Never describe an edit inside one of these parts, such as "replace the last two sentences" or "change two nodes of the flowchart". A removed requirement or scenario needs only its ID, a removed glossary row only its term, and a removed paragraph only its opening words. Give each requirement or section its own heading and write everything the plan changes in it there, removals included; do not also list the changes at the top of the spec file's section, because the two copies drift apart. Before each rule, rationale, or other block written out because it is rewritten as a whole, add one sentence stating what its meaning changes, as in 「講者視窗連上時，按鈕改照 NAV-R11 隱藏。規則改成：」, so a reviewer does not have to compare the block with the spec; the sentence states the change in meaning, never an edit to make.
    - Every decision ends with a "併入" line naming where its rationale goes (see "Spec Conventions"), or "無". Promote a decision to a spec only if a future agent reading the spec would plausibly re-propose the rejected option.
    - "做法要點" covers only what the user must know before approving: architecture impact, and risky or hard-to-reverse operations (data migration, breaking changes, deploy order). No step-by-step implementation list.
    - "驗證方式" marks every scenario of every added requirement, and every scenario that the plan adds to or modifies in an existing requirement, by scenario ID, with how it will be verified: one or more of `unit`, `integration`, `e2e`, and `手動`. Do not name tests or write manual steps; the implementation does not exist yet. Manual steps go in `tests/manual/` during implementation.
    - "還沒定案的問題" must read 「無」 before asking the user to merge: ask the user each question there, and write each answer into the section it belongs to.
-5. Update `roadmap.md` (see "Roadmap Conventions"): add the node as `approved`, or rename the matching `unplanned` node to `PNNNN`; add edges from `depends_on`, except those that "Roadmap Conventions" leaves out; link the plan from the feature's vision section.
-6. Run the spec review (see "Independent Review") with everything in the plan's "Spec 變更" as the changes. Its input is the plan file. Write each finding that holds into "還沒定案的問題" and settle it with the user like any other open question.
+5. Update `roadmap.md` (see "Roadmap Conventions"): add the plan to the stage's node, which is the matching `unplanned` node, the node of the stage whose delivered behavior the plan only changes, or a new node; set the node's status; add edges from `depends_on`, except edges within one node and those that "Roadmap Conventions" leaves out; link the plan from the feature's vision section.
+6. Run the spec review (see "Independent Review") with everything in the plan's "Spec 變更" as the changes. Its input is the plan file. Handle each finding that holds by its label:
+   - 行為會出錯, 無法驗證: write it into "還沒定案的問題" and settle it with the user like any other open question.
+   - 罕見情況: leave it out of the spec by default. List these findings to the user, one line each, and write one into the plan only if the user asks.
+   - A finding that depends on untested browser behavior: add no rule or scenario. In "做法要點", state the result the implementation must reach and that it records the tested behavior in `architecture.md`.
+   - 既有問題 that are not 罕見情況: ask the user about each, like an open question. Recommend folding it into this plan when it lies in a requirement the plan already rewrites and the fix is small; otherwise recommend recording it in `roadmap.md` for a later plan (see "Roadmap Conventions").
 7. Tell the user the plan is ready and wait. When the user instructs a push, commit, push, and open the PR. Title: `[plan NNNN] <English title>`. Body: the plan's "目標" paragraph. Do not link the plan file: the PR's changed files already show it, and GitHub does not resolve relative links in PR descriptions. Then stop and wait for the user to merge.
+
+Step 6 handles each finding that holds as follows:
+
+```mermaid
+flowchart TD
+  finding("A finding that holds") --> rare{"Labeled 罕見情況?"}
+  rare -- yes --> skip("Tell the user in one line;<br/>leave it out of the spec by default")
+  rare -- no --> browser{"Depends on browser behavior<br/>that architecture.md does not record?"}
+  browser -- yes --> test("No rule or scenario;<br/>state the target result in 做法要點")
+  browser -- no --> existing{"Reported under 既有問題?"}
+  existing -- no --> ask("Write it into 還沒定案的問題<br/>and settle it with the user")
+  existing -- yes --> where{"In a requirement the plan rewrites,<br/>and a small fix?"}
+  where -- yes --> fold("Ask the user,<br/>recommending to fold it into this plan")
+  where -- no --> later("Ask the user,<br/>recommending to record it in roadmap.md")
+```
 
 To revise an approved plan before its implementation starts, that is, while no `impl/NNNN-*` branch exists: create branch `plan/NNNN-slug` from up-to-date `main`, keep the ID, edit the plan, and update `roadmap.md` if the revision affects it. Run the spec review with the revised parts of "Spec 變更" as the changes, then follow step 7, with a PR body that states what the revision changes. Once an `impl/NNNN-*` branch exists, revise the plan through step 3 of "Procedure: Implement" instead. A revision that changes no behavior, such as adding IDs or renumbering after a collision, goes in the PR that causes it.
 
 ## Procedure: Implement <id>
 
 Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, every plan in `depends_on` is archived as `done`, and no `impl/NNNN-*` branch exists locally (`git branch --list 'impl/NNNN-*'`) or on `origin` (`git ls-remote --heads origin 'impl/NNNN-*'`). Otherwise stop and tell the user.
+
+The steps below, in order:
+
+```mermaid
+flowchart TD
+  pre{"Preconditions hold?"} -- no --> stop("Stop and tell the user")
+  pre -- yes --> branch("Create impl/NNNN-slug")
+  branch --> specs("Apply the spec changes,<br/>then write code against them")
+  specs --> wrong{"The plan is wrong in a way<br/>that changes spec'd behavior?"}
+  wrong -- yes --> deviate("Ask the user; on agreement,<br/>change the plan and specs as a deviation")
+  deviate --> specs
+  wrong -- no --> tests("Add tests and tests/manual sections;<br/>run tests, check-scenarios, manual checks")
+  tests --> pack("Check the branch holds<br/>everything step 5 lists")
+  pack --> review("Code review sub-agent,<br/>with the spec review, substance only")
+  review --> changed{"Spec content changed, or code<br/>beyond comments and formatting?"}
+  changed -- yes --> retest("Cover changed scenarios;<br/>rerun tests and manual checks")
+  retest --> review
+  changed -- no --> wording("Review wording once with a writing skill,<br/>keeping what the text says")
+  wording --> ready("Tell the user; on the user's instruction,<br/>push and open the impl PR")
+```
 
 1. Create branch `impl/NNNN-slug` from up-to-date `main`.
 2. Apply the plan's spec changes to the spec files first, then write code against the updated specs.
@@ -103,7 +176,7 @@ Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, 
    - Every decision with a "併入" target, written as a rationale (see "Spec Conventions") next to the related requirement or architecture section.
    - The architecture impact from "做法要點", reflected in `architecture.md`.
    - The plan with `status: done`, moved to `docs/plans/archive/`.
-   - `roadmap.md` with the node switched to `done` and the vision section's link pointing to the archive path, as "Roadmap Conventions" describes.
+   - `roadmap.md` with the node's status updated, which is `done` once every plan the node stands for is done, and the vision section's link pointing to the archive path, as "Roadmap Conventions" describes.
 6. Run the code review (see "Independent Review"). Its inputs are the branch's changes and the approved plan as of the plan commit, the last `main` commit that touched the plan file (`git log -1 --format=%H main -- 'docs/plans/NNNN-*.md'`). Give the sub-agent the spec review's checklist as well: it runs the spec review with the spec differences that its code review lists as the changes, and skips the spec review if there are none. If a spec file in the plan's `specs` changed on `main` after the plan commit (`git log <plan commit>..$(git merge-base main HEAD) -- <those files>` lists a commit), tell the sub-agent to add everything in the plan's "Spec 變更" to the changes and to run the spec review even if there are no differences. Fix code that does not match its spec. Before resolving a finding by changing spec'd behavior, ask the user; the outcome is a deviation too. If resolving the findings changes any spec text or code, give every added or changed scenario a test or a `tests/manual/` section, as in step 4, then run all automated tests and `make check-scenarios` again, and rerun every manual check you can run.
 7. Tell the user the work is ready and stop. When the user instructs a push, commit, push, and open the PR. Title: `[impl NNNN] <English title>`. Body: `templates/pr-impl.md`, written against `main` and the approved plan, not the branch's history: describe the final state, and leave out problems that were found and fixed on the branch.
    - The first line links to the approved plan with a full GitHub URL pinned to the plan commit from step 6. A relative link does not resolve in PR descriptions, a link to the impl branch breaks when GitHub deletes the branch on merge, and a link to `main` breaks once the plan moves to the archive.
@@ -127,7 +200,7 @@ First list every plan, on `main` or in an open `[plan NNNN]` PR, whose `depends_
 - If the plan is on `main`:
   1. Close any open `[impl NNNN]` PR. If an `impl/NNNN-*` branch exists locally or on `origin`, tell the user and let them decide whether to delete it; never delete it yourself.
   2. Create branch `abandon/NNNN-slug` from up-to-date `main`. Set `status: abandoned`, add one line under the title stating why and which plan replaces it (if any), and move the file to `docs/plans/archive/`. If the user decided that a plan on `main` only needs its `depends_on` changed, for example from NNNN to the plan that replaces it, edit that `depends_on` on this branch. This changes no behavior, so it needs no separate revision PR.
-  3. In `roadmap.md`, remove the node and its edges, reconnect dependents to the replacing plan if there is one, and update the vision section.
+  3. In `roadmap.md`, if the node stands only for this plan, remove the node and its edges, and reconnect dependents to the replacing plan's node if there is one; otherwise update the node's status. Update the vision section.
   4. Tell the user the change is ready and wait. When the user instructs a push, commit, push, and open a PR titled `[abandon NNNN] <English title>`; then stop.
 
 Make every other revision the user chose outside this procedure. For a plan on `main`, revise it as "Procedure: Plan" describes for an approved plan. For a plan in an open `[plan MMMM]` PR, edit the plan on that PR's branch.
@@ -143,24 +216,33 @@ Make every other revision the user chose outside this procedure. For a plan on `
 - "The branch's changes" means the working tree compared with the point where the branch left `main`: `git diff $(git merge-base main HEAD)` for tracked files, plus the new files that `git ls-files --others --exclude-standard` lists. Do not point the sub-agent at a commit range; it misses uncommitted work.
 - Tell the sub-agent to report findings and not edit files.
 - Check every finding against the documents and code. Never drop a finding silently: for each one you reject, tell the user why in one sentence.
-- If resolving the findings changes any spec text, in a spec file or in a plan's "Spec 變更", or any code, run the review again with the same inputs, plus the previous review's report word for word. The sub-agent first confirms that each earlier finding is resolved, then looks for new ones.
+- If resolving the findings changes what any spec text says, in a spec file or in a plan's "Spec 變更", such as a rule, a scenario's 前提, 動作 or 結果, or a decision, or changes any code other than comments and formatting, run the review again with the same inputs, plus the previous review's report word for word. The sub-agent first confirms that each earlier finding is resolved, then looks for new ones. Rewording that keeps the meaning starts no new round.
+- Reviews check substance, not wording: tell the sub-agent not to report word choice, phrasing, or punctuation. Once a round needs no further round, review the wording of the documents the branch adds or changes, once, with a writing skill for the documents' language if this environment offers one. The wording review changes wording only: drop every suggestion that would change what a rule, scenario, or decision says. If it shows that a text can be read two ways, rewrite the text to the meaning already decided; if that meaning was never decided, ask the user, as an open question, and handle the answer like any other change, which starts another round of the review.
 
 ### Spec Review
 
-The spec review looks for gaps and contradictions in the specs. It covers the changes that the procedure step names, plus every existing requirement and scenario, in the specs or in the plan's "Spec 變更", that:
+The spec review looks for gaps and contradictions that the changes bring into the specs. It covers the changes that the procedure step names, plus every existing requirement and scenario, in the specs or in the plan's "Spec 變更", that:
 
 1. Refers to a changed requirement by ID, or uses a term or definition that the changes alter.
 2. Handles an input or state that a changed requirement also handles.
 3. Has a scenario whose 前提 or 結果 depends on a changed rule.
 
-The sub-agent must report gaps and contradictions in these existing requirements too, never drop one as out of scope. Checklist:
+A finding belongs to the changes when the changes create it: a contradiction with changed text, or a situation whose result the changes alter or leave unspecified. A gap or contradiction that exists on `main` whether or not the changes land is a pre-existing problem: the sub-agent reports it under a separate heading, 既有問題, and never drops it as out of scope. The plan's "決策" section records choices the user already made; the sub-agent does not report a recorded choice again unless it contradicts spec text. Checklist:
 
 - How every input or state that the changes add or alter combines with each existing rule that handles the same input or state: for example, a key pressed while the screen is black, while a page number is being typed, while a component has focus, or while the key auto-repeats. If an affected spec opens with a flowchart, start from the inputs and states it routes.
 - No two requirements or scenarios give different results for the same situation, and every scenario's 結果 follows from its requirement's rule.
 - Spec text outside the requirements, such as definitions and flowcharts, agrees with the requirements.
 - No requirement conflicts with the scope or non-goals in `product.md`, or with a constraint recorded in `architecture.md`, such as a browser behavior tested there.
 - Every scenario's 結果 can be judged as met or not met.
-- Every boundary condition of a rule has its own scenario.
+- Every boundary condition of a rule that the changes add or alter has its own scenario.
+
+The sub-agent labels each finding with one of these:
+
+- 行為會出錯: two texts contradict each other, or the specs leave wrong or unspecified a situation that the target users in `product.md` meet while giving a talk or a class.
+- 罕見情況: a situation that needs several uncommon conditions at once, such as a touch screen, an open overview, and a scrollable block on the slide together, or one that occurs only while making a deck, such as a moment during `make dev`. The label also applies to a 既有問題.
+- 無法驗證: a scenario's 結果 cannot be judged as met or not met.
+
+When a finding's result depends on browser behavior that `architecture.md` does not record, the sub-agent says so and suggests the result to aim for, not a new rule or scenario.
 
 ### Code Review
 
@@ -189,10 +271,10 @@ For a change, the sub-agent also:
 ````markdown
 ```mermaid
 flowchart TD
-  P0005("0005 帳號登入<br/>已完成"):::done
-  P0007("0007 訂閱付款<br/>已核准"):::approved
+  login("帳號登入<br/>已完成"):::done
+  subscription("訂閱付款<br/>已核准"):::approved
   multi_account("OAuth 綁定多帳號<br/>未規劃"):::unplanned
-  P0005 --> P0007 --> multi_account
+  login --> subscription --> multi_account
   classDef done fill:#4f7262,stroke:#4f7262,color:#f7f5f0
   classDef approved fill:none,stroke:#6b8f7e,stroke-width:1.5px
   classDef unplanned fill:none,stroke:#9a978f,stroke-dasharray:3 3
@@ -200,15 +282,17 @@ flowchart TD
 ````
 
 - Use `flowchart TD`. Do not group nodes into subgraphs, because a plan can span several features.
-- Node IDs: `PNNNN` for plans; a temporary snake_case ID for unplanned stages, renamed to `PNNNN` once a plan exists; a snake_case feature ID, with class `done`, for a collapsed finished feature.
+- A node stands for one stage of a feature and for every plan that works on that stage. A plan that only changes behavior the stage already delivered, without adding a capability, joins that stage's node instead of getting its own, as a plan that reverses one of the stage's design decisions does.
+- Node IDs: a snake_case ID that names the stage, chosen when the node is added and kept when plans join it; a snake_case feature ID, with class `done`, for a collapsed finished feature.
 - Use rounded nodes, `("...")`, never square `["..."]`.
-- Labels read `<plan numbers> <name><br/><status>`: the number of every plan the node stands for, separated by `、` (none for an `unplanned` node), then the stage or feature name, then the status as text as well as color: `已完成`, `已核准`, `未規劃`.
+- Labels read `<name><br/><status>`: the stage or feature name, then the status as text as well as color: `已完成`, `已核准`, `未規劃`. Labels carry no plan numbers, because a node can stand for several plans; the vision section links each plan.
+- A node takes the status of its least advanced plan on `main`: `未規劃` while the stage has none, `已核准` while any of its plans is not done, `已完成` once every plan is done.
 - Copy the three `classDef` lines above verbatim; do not change colors or add classes. They are tuned for both GitHub light and dark themes. Fill level shows progress: dashed outline, solid outline, solid fill.
 - `A --> B` means B depends on A.
 - Draw only direct dependencies: leave out `A --> C` when another path already leads from A to C, as in `A --> B --> C`. That path already implies the order, and the extra edge only adds crossings. After any change to the graph, remove the edges this rule leaves out.
 - Keep `done` nodes until their feature is collapsed.
-- A vision subsection states the feature's goal and scope, then lists its stages in order, linking each stage that has a plan. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Decisions the user has already made for an unplanned stage may be recorded in that stage's line, one sentence each, so they survive until the stage's plan is written. Remove the subsection when every stage is done.
-- If the graph becomes hard to read, collapse each finished feature into one node in a Tier 3 PR. The collapsed node takes over every edge between the feature's plans and nodes outside the feature.
+- A vision subsection states the feature's goal and scope, then lists its stages in order, linking every plan of each stage: a stage with one plan links its name, and a stage with several plans names each one after the stage name, as in `預覽總覽（[plan 0005](archive/0005-overview.md)、[plan 0006](0006-overview-in-presenter-window.md)）`. If the feature has only one stage, skip the list: describe the stage in the same paragraph and put its plan link there. Keep it at the level of goals and stages; details belong in the stage's plan when it is written. Decisions the user has already made for an unplanned stage may be recorded in that stage's line, one sentence each, so they survive until the stage's plan is written. A spec gap on `main` that the user decided to fix in a later plan goes in the line of the most related `unplanned` stage, as a short paragraph stating the situation and the intended result; if no stage fits, add an `unplanned` node for it. Remove the subsection when every stage is done.
+- If the graph becomes hard to read, collapse each finished feature into one node in a Tier 3 PR. The collapsed node takes over every edge between the feature's nodes and nodes outside the feature.
 
 ## Spec Conventions
 
