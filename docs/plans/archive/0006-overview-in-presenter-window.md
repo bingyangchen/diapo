@@ -1,7 +1,7 @@
 ---
 id: "0006"
 title: overview-in-presenter-window
-status: approved
+status: done
 specs: [overview.md, navigation.md, presenter.md, product.md, architecture.md]
 depends_on: ["0005"]
 ---

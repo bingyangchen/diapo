@@ -268,6 +268,25 @@ export async function simulateRebuild(slidetrayDirectory: string): Promise<void>
   await writeFile(htmlPath, html);
 }
 
+/** The notice that the presenter window shows while the two windows play different builds (PRES-R12). */
+export const VERSION_MISMATCH_NOTICE =
+  "兩個視窗的簡報版本不同，請用 Ctrl+R（macOS 用 Cmd+R）重新整理兩個視窗";
+
+/**
+ * Opens a copy of `annual-review` and its presenter window, then rebuilds the copy and reloads
+ * the audience window, so the presenter window plays the older build and shows the version
+ * notice (PRES-R12).
+ */
+export async function openPresenterOfOlderBuild(page: Page): Promise<Page> {
+  const slidetray = await copySlidetray("annual-review");
+  await openSlidetray(page, slidetray);
+  const presenter = await openPresenter(page);
+  await simulateRebuild(slidetray);
+  await page.reload();
+  await expect(getPresenterAlert(presenter)).toHaveText(VERSION_MISMATCH_NOTICE);
+  return presenter;
+}
+
 /**
  * Records every call to the presenter window's `focus()`, which brings it to the front. Only a
  * window of the same origin sees its own `focus` replaced, so the deck must come from a static

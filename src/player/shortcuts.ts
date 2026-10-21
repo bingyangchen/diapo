@@ -61,6 +61,8 @@ const OVERVIEW_KEY_TO_SHORTCUT: Record<string, OverviewShortcut> = {
   ...Object.fromEntries([..."0123456789"].map((digit) => [digit, { type: "digit" }])),
 };
 
+const OVERVIEW_SCROLL_KEYS = new Set([" ", "PageUp", "PageDown", "Home", "End"]);
+
 // Presenter remotes send these keys, so they keep working while a text field has focus.
 const PRESENTER_REMOTE_KEYS = new Set(["PageUp", "PageDown", "F5"]);
 
@@ -178,6 +180,20 @@ export function getOverviewShortcut(
   }
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
   return OVERVIEW_KEY_TO_SHORTCUT[key] ?? null;
+}
+
+/**
+ * Whether a keydown is one of the keys that OVW-R12 hands to the browser to scroll the open
+ * overview, Backspace included while no page number is being typed. Keys pressed with Ctrl, Cmd,
+ * or Alt are not, since those stay the browser's, like every key pressed with them (NAV-R7).
+ */
+export function isOverviewScrollKey(
+  event: KeyboardEvent,
+  { isTypingPageNumber }: { isTypingPageNumber: boolean },
+): boolean {
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (event.key === "Backspace") return !isTypingPageNumber;
+  return OVERVIEW_SCROLL_KEYS.has(event.key);
 }
 
 /** Whether the element takes typed text or arrow keys to change its value. */

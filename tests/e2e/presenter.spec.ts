@@ -22,6 +22,7 @@ import {
   openDeck,
   openDeckAt,
   openPresenter,
+  openPresenterOfOlderBuild,
   openSiteDeck,
   openSlidetray,
   recordFocusCalls,
@@ -29,6 +30,7 @@ import {
   simulateRebuild,
   swipe,
   test,
+  VERSION_MISMATCH_NOTICE,
 } from "./support.ts";
 
 // WebKit takes most of the test timeout to close a context whose pop-up window is still in
@@ -586,14 +588,14 @@ test.describe("PRES-R3 operating the deck from the presenter window", () => {
     await expect(presenter.getByTestId("presenter-page-number")).toHaveText("3");
     await page.bringToFront();
     await page.keyboard.press("g");
-    await expectOverviewOpen(page);
     await expectOverviewOpen(presenter);
     await expect(presenter.getByTestId("presenter-page-number")).toHaveCount(0);
+    await expectSlide(page, "Intro");
+    await expect(getOverview(page)).toHaveCount(0);
     await presenter.bringToFront();
     await getOverview(presenter).click({ position: { x: 5, y: 5 } });
     await presenter.keyboard.press("Enter");
 
-    await expectOverviewClosed(page);
     await expectOverviewClosed(presenter);
     await expectSlide(page, "Intro");
   });
@@ -2183,12 +2185,7 @@ test.describe("PRES-R12 the presenter window keeps its last screen while disconn
         });
       }, { capture: true });
     `);
-    const slidetray = await copySlidetray("annual-review");
-    await openSlidetray(page, slidetray);
-    const presenter = await openPresenter(page);
-    await simulateRebuild(slidetray);
-    await page.reload();
-    await expect(getPresenterAlert(presenter)).toHaveText(VERSION_MISMATCH_NOTICE);
+    const presenter = await openPresenterOfOlderBuild(page);
 
     await presenter.keyboard.press("ControlOrMeta+r");
     await expect(presenter.locator("html")).toHaveAttribute(
@@ -2297,9 +2294,6 @@ test.describe("PRES-R15 a presenter window controls only the audience window tha
     await expectSlideToStay(secondTab, "Intro");
   });
 });
-
-const VERSION_MISMATCH_NOTICE =
-  "兩個視窗的簡報版本不同，請用 Ctrl+R（macOS 用 Cmd+R）重新整理兩個視窗";
 
 /**
  * Opens a deck at a slide and step. Opens the first slide first, so the player is listening

@@ -15,8 +15,8 @@ export type OverviewState = {
   selectedSlideIndex: number;
   /**
    * How many arrow keys the speaker pressed in this overview, in either window, including
-   * those that left the selection where it was. Each window scrolls the selection into view
-   * when the count changes (OVW-R7, OVW-R18).
+   * those that left the selection where it was. The window that shows the overview scrolls
+   * the selection into view when the count changes (OVW-R7, OVW-R18).
    */
   arrowKeyCount: number;
 };
@@ -34,6 +34,11 @@ export type PlayerState = {
   pageNumberDigits: string;
   /** Null while the overview is closed. It never opens over the black screen (OVW-R13). */
   overview: OverviewState | null;
+  /**
+   * Whether a presenter window of the same build is connected, in which case only it shows the
+   * open overview, and this window keeps showing the slide (OVW-R26).
+   */
+  isPresenterConnected: boolean;
 };
 
 export type PlayerAction =
@@ -48,6 +53,8 @@ export type PlayerAction =
   | { type: "open-overview" }
   | { type: "close-overview" }
   | { type: "move-selection"; direction: SelectionDirection; slideCount: number }
+  | { type: "connect-presenter" }
+  | { type: "disconnect-presenter" }
   | { type: "restore-page" };
 
 export function makeInitialState({
@@ -66,6 +73,7 @@ export function makeInitialState({
     isBlackScreen: false,
     pageNumberDigits: "",
     overview: null,
+    isPresenterConnected: false,
   };
 }
 
@@ -148,6 +156,18 @@ export function reducePlayerState(
               arrowKeyCount: state.overview.arrowKeyCount + 1,
             },
           };
+    // An open overview stays open when the presenter window connects, and moves there (OVW-R28).
+    case "connect-presenter":
+      return { ...state, isPresenterConnected: true };
+    // The presenter window leaving closes the overview that only it showed, which cancels the
+    // page number being typed but keeps the slide and the step (OVW-R27, NAV-R5).
+    case "disconnect-presenter":
+      return state.isPresenterConnected
+        ? reducePlayerState(
+            { ...state, isPresenterConnected: false },
+            { type: "close-overview" },
+          )
+        : state;
     // A page restored from the back-forward cache shows the slide alone, as a reload would,
     // whichever browser kept the page (OVW-R16, NAV-R9, NAV-R5).
     case "restore-page":
