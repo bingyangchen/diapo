@@ -206,8 +206,8 @@ flowchart TD
   subscription("訂閱付款<br/>已核准"):::approved
   multi_account("OAuth 綁定多帳號<br/>未規劃"):::unplanned
   login --> subscription --> multi_account
-  classDef done fill:#4f7262,stroke:#4f7262,color:#f7f5f0
-  classDef approved fill:none,stroke:#6b8f7e,stroke-width:1.5px
+  classDef done fill:#4f726280,stroke:#4f726280
+  classDef approved fill:#e0a33a,stroke:#e0a33a,color:#1f1a12,font-weight:bold
   classDef unplanned fill:none,stroke:#9a978f,stroke-dasharray:3 3
 ```
 ````
@@ -218,7 +218,7 @@ flowchart TD
 - Use rounded nodes, `("...")`, never square `["..."]`.
 - Labels read `<name><br/><status>`: the stage or feature name, then the status as text as well as color: `已完成`, `已核准`, `未規劃`. Labels carry no plan numbers, because a node can stand for several plans; the vision section links each plan.
 - A node takes the status of its least advanced plan on `main`: `未規劃` while the stage has none, `已核准` while any of its plans is not done, `已完成` once every plan is done.
-- Copy the three `classDef` lines above verbatim; do not change colors or add classes. They are tuned for both GitHub light and dark themes. Fill level shows progress: dashed outline, solid outline, solid fill.
+- Copy the three `classDef` lines above verbatim; do not change colors or add classes. They are tuned for both GitHub light and dark themes; the `done` fill is half-transparent so it shows as a muted green on either background, and a filled node's stroke matches its fill. Visual weight follows what to work on next: `approved` stands out with a saturated fill, `done` recedes to a muted fill, and `unplanned` stays a dashed outline.
 - `A --> B` means B depends on A.
 - Draw only direct dependencies: leave out `A --> C` when another path already leads from A to C, as in `A --> B --> C`. That path already implies the order, and the extra edge only adds crossings. After any change to the graph, remove the edges this rule leaves out.
 - Keep `done` nodes until their feature is collapsed.

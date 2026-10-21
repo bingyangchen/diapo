@@ -48,8 +48,8 @@ flowchart TD
   theme --> mermaid_diagram
   theme --> charts
   steps --> charts
-  classDef done fill:#4f7262,stroke:#4f7262,color:#f7f5f0
-  classDef approved fill:none,stroke:#6b8f7e,stroke-width:1.5px
+  classDef done fill:#4f726280,stroke:#4f726280
+  classDef approved fill:#e0a33a,stroke:#e0a33a,color:#1f1a12,font-weight:bold
   classDef unplanned fill:none,stroke:#9a978f,stroke-dasharray:3 3
 ```
 
