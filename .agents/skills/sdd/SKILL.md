@@ -38,27 +38,9 @@ Nothing in `docs/specs/` or `roadmap.md` is final. If you see a better approach 
 
 When unsure, take the higher tier.
 
-The tiers and the life of a Tier 1 plan:
-
-```mermaid
-flowchart TD
-  start("A change to this repo") --> t1q{"Alters spec'd behavior or architecture,<br/>or adds a spec file?"}
-  t1q -- yes --> plan("Tier 1: Procedure: Plan<br/>plan PR")
-  t1q -- no --> t3q{"On the Tier 3 whitelist?"}
-  t3q -- yes --> t3("Tier 3: edit,<br/>open a PR when the user says to push")
-  t3q -- no --> change("Tier 2: Procedure: Change<br/>change PR")
-  plan --> m1{"The user merges the plan PR?"}
-  m1 -- yes --> impl("Procedure: Implement<br/>impl PR")
-  m1 -- "the user drops the plan" --> abandon("Procedure: Abandon")
-  impl --> m2{"The user merges the impl PR?"}
-  m2 -- yes --> done("Plan archived as done")
-  m2 -- "the user drops the plan" --> abandon
-```
-
 ## Rules That Apply Everywhere
 
 - Never push to `main`. Never merge a PR. The user merges; a merge is the user's approval.
-- The diagrams in this skill restate the text around them. Change a diagram in the same edit as that text; where they disagree, the text wins.
 - Commit and push only when the user explicitly instructs it.
 - In a PR body's manual checklist, tick an item only if the latest run of its check passed. Leave an item unticked only if you could not run the check, and state why under the item so the user can run it.
 - Assign every PR you open to the user who directed the work: `gh pr create --assignee @me`, which resolves to the account `gh` is logged in as. If `gh` is logged in as a bot or someone other than that user, ask the user who to assign.
@@ -84,22 +66,6 @@ flowchart TD
 
 ## Procedure: Plan
 
-The steps below, in order:
-
-```mermaid
-flowchart TD
-  read("Read product.md, architecture.md,<br/>affected specs, roadmap.md, open PRs") --> branch("Pick the ID,<br/>create plan/NNNN-slug")
-  branch --> write("Fill in the plan,<br/>settle open questions with the user")
-  write --> roadmap("Update roadmap.md")
-  roadmap --> review("Spec review sub-agent,<br/>substance only")
-  review --> handle("Handle each finding by its label")
-  handle --> changed{"A rule, scenario, or decision changed?"}
-  changed -- yes --> review
-  changed -- no --> wording("Review wording once with a writing skill,<br/>keeping what the text says")
-  wording --> ready("Tell the user the plan is ready")
-  ready --> pr("On the user's instruction, push,<br/>open the plan PR, wait for the merge")
-```
-
 1. Read `product.md`, `architecture.md`, every affected spec, `roadmap.md`, and the output of `gh pr list --state open`.
 2. Pick the ID: take the highest `NNNN` across `docs/plans/**/*.md` and open PR titles (`[plan NNNN]`, `[impl NNNN]`), then add 1. If two plans end up with the same ID, the one merged later renumbers.
 3. Create branch `plan/NNNN-slug` from up-to-date `main`.
@@ -117,53 +83,18 @@ flowchart TD
    - "驗證方式" marks every scenario of every added requirement, and every scenario that the plan adds to or modifies in an existing requirement, by scenario ID, with how it will be verified: one or more of `unit`, `integration`, `e2e`, and `手動`. Do not name tests or write manual steps; the implementation does not exist yet. Manual steps go in `tests/manual/` during implementation.
    - "還沒定案的問題" must read 「無」 before asking the user to merge: ask the user each question there, and write each answer into the section it belongs to.
 5. Update `roadmap.md` (see "Roadmap Conventions"): add the plan to the stage's node, which is the matching `unplanned` node, the node of the stage whose delivered behavior the plan only changes, or a new node; set the node's status; add edges from `depends_on`, except edges within one node and those that "Roadmap Conventions" leaves out; link the plan from the feature's vision section.
-6. Run the spec review (see "Independent Review") with everything in the plan's "Spec 變更" as the changes. Its input is the plan file. Handle each finding that holds by its label:
-   - 行為會出錯, 無法驗證: write it into "還沒定案的問題" and settle it with the user like any other open question.
+6. Run the spec review (see "Independent Review") with everything in the plan's "Spec 變更" as the changes. Its input is the plan file. Handle each finding that holds by the first of these cases that applies:
    - 罕見情況: leave it out of the spec by default. List these findings to the user, one line each, and write one into the plan only if the user asks.
    - A finding that depends on untested browser behavior: add no rule or scenario. In "做法要點", state the result the implementation must reach and that it records the tested behavior in `architecture.md`.
-   - 既有問題 that are not 罕見情況: ask the user about each, like an open question. Recommend folding it into this plan when it lies in a requirement the plan already rewrites and the fix is small; otherwise recommend recording it in `roadmap.md` for a later plan (see "Roadmap Conventions").
+   - 既有問題: ask the user about each, like an open question. Recommend folding it into this plan when it lies in a requirement the plan already rewrites and the fix is small; otherwise recommend recording it in `roadmap.md` for a later plan (see "Roadmap Conventions").
+   - Any other 行為會出錯 or 無法驗證: write it into "還沒定案的問題" and settle it with the user like any other open question.
 7. Tell the user the plan is ready and wait. When the user instructs a push, commit, push, and open the PR. Title: `[plan NNNN] <English title>`. Body: the plan's "目標" paragraph. Do not link the plan file: the PR's changed files already show it, and GitHub does not resolve relative links in PR descriptions. Then stop and wait for the user to merge.
-
-Step 6 handles each finding that holds as follows:
-
-```mermaid
-flowchart TD
-  finding("A finding that holds") --> rare{"Labeled 罕見情況?"}
-  rare -- yes --> skip("Tell the user in one line;<br/>leave it out of the spec by default")
-  rare -- no --> browser{"Depends on browser behavior<br/>that architecture.md does not record?"}
-  browser -- yes --> test("No rule or scenario;<br/>state the target result in 做法要點")
-  browser -- no --> existing{"Reported under 既有問題?"}
-  existing -- no --> ask("Write it into 還沒定案的問題<br/>and settle it with the user")
-  existing -- yes --> where{"In a requirement the plan rewrites,<br/>and a small fix?"}
-  where -- yes --> fold("Ask the user,<br/>recommending to fold it into this plan")
-  where -- no --> later("Ask the user,<br/>recommending to record it in roadmap.md")
-```
 
 To revise an approved plan before its implementation starts, that is, while no `impl/NNNN-*` branch exists: create branch `plan/NNNN-slug` from up-to-date `main`, keep the ID, edit the plan, and update `roadmap.md` if the revision affects it. Run the spec review with the revised parts of "Spec 變更" as the changes, then follow step 7, with a PR body that states what the revision changes. Once an `impl/NNNN-*` branch exists, revise the plan through step 3 of "Procedure: Implement" instead. A revision that changes no behavior, such as adding IDs or renumbering after a collision, goes in the PR that causes it.
 
 ## Procedure: Implement <id>
 
 Preconditions: `docs/plans/NNNN-*.md` exists on `main` with `status: approved`, every plan in `depends_on` is archived as `done`, and no `impl/NNNN-*` branch exists locally (`git branch --list 'impl/NNNN-*'`) or on `origin` (`git ls-remote --heads origin 'impl/NNNN-*'`). Otherwise stop and tell the user.
-
-The steps below, in order:
-
-```mermaid
-flowchart TD
-  pre{"Preconditions hold?"} -- no --> stop("Stop and tell the user")
-  pre -- yes --> branch("Create impl/NNNN-slug")
-  branch --> specs("Apply the spec changes,<br/>then write code against them")
-  specs --> wrong{"The plan is wrong in a way<br/>that changes spec'd behavior?"}
-  wrong -- yes --> deviate("Ask the user; on agreement,<br/>change the plan and specs as a deviation")
-  deviate --> specs
-  wrong -- no --> tests("Add tests and tests/manual sections;<br/>run tests, check-scenarios, manual checks")
-  tests --> pack("Check the branch holds<br/>everything step 5 lists")
-  pack --> review("Code review sub-agent,<br/>with the spec review, substance only")
-  review --> changed{"Spec content changed, or code<br/>beyond comments and formatting?"}
-  changed -- yes --> retest("Cover changed scenarios;<br/>rerun tests and manual checks")
-  retest --> review
-  changed -- no --> wording("Review wording once with a writing skill,<br/>keeping what the text says")
-  wording --> ready("Tell the user; on the user's instruction,<br/>push and open the impl PR")
-```
 
 1. Create branch `impl/NNNN-slug` from up-to-date `main`.
 2. Apply the plan's spec changes to the spec files first, then write code against the updated specs.
@@ -177,7 +108,7 @@ flowchart TD
    - The architecture impact from "做法要點", reflected in `architecture.md`.
    - The plan with `status: done`, moved to `docs/plans/archive/`.
    - `roadmap.md` with the node's status updated, which is `done` once every plan the node stands for is done, and the vision section's link pointing to the archive path, as "Roadmap Conventions" describes.
-6. Run the code review (see "Independent Review"). Its inputs are the branch's changes and the approved plan as of the plan commit, the last `main` commit that touched the plan file (`git log -1 --format=%H main -- 'docs/plans/NNNN-*.md'`). Give the sub-agent the spec review's checklist as well: it runs the spec review with the spec differences that its code review lists as the changes, and skips the spec review if there are none. If a spec file in the plan's `specs` changed on `main` after the plan commit (`git log <plan commit>..$(git merge-base main HEAD) -- <those files>` lists a commit), tell the sub-agent to add everything in the plan's "Spec 變更" to the changes and to run the spec review even if there are no differences. Fix code that does not match its spec. Before resolving a finding by changing spec'd behavior, ask the user; the outcome is a deviation too. If resolving the findings changes any spec text or code, give every added or changed scenario a test or a `tests/manual/` section, as in step 4, then run all automated tests and `make check-scenarios` again, and rerun every manual check you can run.
+6. Run the code review (see "Independent Review"). Its inputs are the branch's changes and the approved plan as of the plan commit, the last `main` commit that touched the plan file (`git log -1 --format=%H main -- 'docs/plans/NNNN-*.md'`). Give the sub-agent the spec review's checklist as well: it runs the spec review with the spec differences that its code review lists as the changes, and skips the spec review if there are none. If a spec file in the plan's `specs` changed on `main` after the plan commit (`git log <plan commit>..$(git merge-base main HEAD) -- <those files>` lists a commit), tell the sub-agent to add everything in the plan's "Spec 變更" to the changes and to run the spec review even if there are no differences. Fix code that does not match its spec. Handle the spec review's findings by their labels, as step 6 of "Procedure: Plan" describes, with two differences: a finding that step writes into "還沒定案的問題" is settled with the user directly, and a finding that depends on untested browser behavior is tested now and recorded in `architecture.md`. Before resolving a finding by changing spec'd behavior, ask the user; the outcome is a deviation too. If resolving the findings changes any spec text or code, give every added or changed scenario a test or a `tests/manual/` section, as in step 4, then run all automated tests and `make check-scenarios` again, and rerun every manual check you can run.
 7. Tell the user the work is ready and stop. When the user instructs a push, commit, push, and open the PR. Title: `[impl NNNN] <English title>`. Body: `templates/pr-impl.md`, written against `main` and the approved plan, not the branch's history: describe the final state, and leave out problems that were found and fixed on the branch.
    - The first line links to the approved plan with a full GitHub URL pinned to the plan commit from step 6. A relative link does not resolve in PR descriptions, a link to the impl branch breaks when GitHub deletes the branch on merge, and a link to `main` breaks once the plan moves to the archive.
    - "與 Plan 不同的地方" lists every deviation, split into "行為改變" and "實作細節". It covers every difference that the review reported between the branch and the approved plan.
