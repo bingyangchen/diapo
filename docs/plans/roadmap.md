@@ -11,7 +11,7 @@ flowchart TD
   steps("頁內分步<br/>已完成"):::done
   transitions("換頁與進場動畫<br/>未規劃"):::unplanned
   magic_move("Magic Move<br/>未規劃"):::unplanned
-  overview("預覽總覽<br/>已核准"):::approved
+  overview("預覽總覽<br/>已完成"):::done
   dev_reorder("開發時排序<br/>未規劃"):::unplanned
   onsite_reorder("現場排序與隱藏<br/>未規劃"):::unplanned
   annotation("畫筆標註<br/>未規劃"):::unplanned
@@ -63,7 +63,7 @@ flowchart TD
 2. [頁內分步](archive/0003-steps.md)：由播放器統一處理「下一步」，這頁的步驟走完才換頁。網址的 hash 加上第二段記錄目前的步驟（例如 `#/intro/2`）。
 3. 換頁與進場動畫：播放器提供一組預設效果，每一頁用效果的名稱挑選要用哪一種，沒有挑選的頁面套用 `deck.json` 指定的效果。
 4. Magic Move：換頁時，前後兩頁都有的元素從前一頁的位置移動到後一頁的位置，一般元素與程式碼都支援。程式碼的動畫在 build 時先算好，播放時不載入 Shiki。
-5. 預覽總覽（[plan 0005](archive/0005-overview.md)、[plan 0006](0006-overview-in-presenter-window.md)）：以縮圖列出每一頁，縮圖顯示每頁最後一步的畫面。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。講者視窗連上時，總覽只顯示在講者視窗，投影幕上繼續顯示目前的頁面。
+5. 預覽總覽（[plan 0005](archive/0005-overview.md)、[plan 0006](archive/0006-overview-in-presenter-window.md)）：以縮圖列出每一頁，縮圖顯示每頁最後一步的畫面。在總覽點選一頁屬於跳頁，會在瀏覽器新增一筆瀏覽紀錄。講者視窗連上時，總覽只顯示在講者視窗，投影幕上繼續顯示目前的頁面。
 6. 開發時排序：在 `make dev` 的總覽裡拖曳縮圖調整順序，dev server 把新的順序寫回 `deck.json`。專案擁有者已經決定只支援用滑鼠與觸控板拖曳，用觸控與鍵盤排序留給「現場排序與隱藏」決定。
 7. 現場排序與隱藏：在 `make dev` 以外的環境，講者在總覽裡拖曳縮圖調整順序、隱藏頁面，新的順序與隱藏的頁面存在這台電腦的瀏覽器裡，可以還原。
 8. 畫筆標註：在頁面上疊一層 canvas，換頁後清除。

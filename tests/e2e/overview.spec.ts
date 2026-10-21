@@ -28,6 +28,7 @@ import {
   openDeck,
   openDeckAt,
   openPresenter,
+  openPresenterOfOlderBuild,
   openSiteDeck,
   openSlidetray,
   recordPageShowPersisted,
@@ -41,19 +42,18 @@ import {
   slowDownOverviewAnimation,
   swipe,
   test,
-  wheelOverview,
+  VERSION_MISMATCH_NOTICE,
 } from "./support.ts";
 
 // The `example` fixture deck plays intro, agenda, and recap (headed Summary). `annual-review`
-// plays intro (with a text field), agenda, recap, and thanks. `demo` plays intro, list
-// (3 steps), recap, toggle, expand, counter, gallery, repl, and finale. `steps` plays intro,
-// list (First point at step 1, Second point at step 2, New conclusion from step 3), recap, and
-// more, with gaps tenth. `six-pages`, `seven-pages`, and `forty-pages` play "Page 1" onwards;
-// page 1 of `forty-pages` counts the seconds since it mounted and has long notes. `autofocus`
-// plays intro, repl (a text area with autoFocus), and recap.
-
-const VERSION_MISMATCH_NOTICE =
-  "兩個視窗的簡報版本不同，請用 Ctrl+R（macOS 用 Cmd+R）重新整理兩個視窗";
+// plays intro (with a text field), agenda, recap, and thanks. `capture-keys` plays intro,
+// agenda, grabber (claims → in the capture phase), and code (a code block that scrolls).
+// `demo` plays intro, list (3 steps), recap, toggle, expand, counter, gallery, repl, and
+// finale. `steps` plays intro, list (First point at step 1, Second point at step 2, New
+// conclusion from step 3), recap, and more, with gaps tenth. `six-pages`, `seven-pages`, and
+// `forty-pages` play "Page 1" onwards; page 1 of `forty-pages` counts the seconds since it
+// mounted and has long notes. `autofocus` plays intro, repl (a text area with autoFocus), and
+// recap.
 
 // WebKit takes most of the test timeout to close a context whose pop-up window is still in
 // fullscreen, so every test leaves fullscreen first.
@@ -321,6 +321,59 @@ test.describe("OVW-R3 the overview button", () => {
 
     await expectOverviewClosed(page);
     await expectSlide(page, "Page 1");
+  });
+
+  test("OVW-R3.12 the buttons hide as usual while the presenter window shows the overview", async ({
+    page,
+  }) => {
+    await installPausedClock(page);
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    await page.mouse.move(100, 100);
+    await page.mouse.move(200, 200);
+    await expectButtonsShown(page, true);
+
+    await page.keyboard.press("g");
+    await page.clock.runFor(3000);
+
+    await expectOverviewOpen(presenter);
+    await expectButtonsShown(page, false);
+  });
+
+  test("OVW-R3.13 closing the presenter window's overview leaves the buttons hidden", async ({
+    page,
+  }) => {
+    await installPausedClock(page);
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+    await presenter.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    await page.clock.runFor(3000);
+    await expectButtonsShown(page, false);
+
+    await presenter.keyboard.press("g");
+
+    await expectOverviewClosed(presenter);
+    // Gives buttons that should stay hidden the time to fade in.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await expectButtonsShown(page, false);
+  });
+
+  test("OVW-R3.14 the audience window's overview button closes the presenter window's overview", async ({
+    page,
+  }) => {
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+
+    await page.mouse.move(100, 100);
+    await getOverviewButton(page).click();
+
+    await expectOverviewClosed(presenter);
+    await expectSlide(page, "Intro");
   });
 });
 
@@ -950,6 +1003,64 @@ test.describe("OVW-R10 the current slide stays under the overview", () => {
     await expectSlide(page, "Repl");
     await expect(code).toBeFocused();
   });
+
+  test("OVW-R10.6 the slide on the projector takes no click while the presenter window shows the overview", async ({
+    page,
+  }) => {
+    await openDeckAt(page, "demo", "#/counter");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    const counter = getCanvas(page).getByRole("button", { name: /^Count: / });
+    const center = await getCenter(counter);
+
+    await page.mouse.click(center.x, center.y);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await expect(counter).toHaveText("Count: 0");
+    await expectOverviewOpen(presenter);
+    await page.keyboard.press("g");
+
+    await expectOverviewClosed(presenter);
+    await expect(counter).toHaveText("Count: 0");
+  });
+
+  test("OVW-R10.7 the presenter window's overview leaves the text field on the projector unfocused", async ({
+    page,
+  }) => {
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    const textField = getCanvas(page).getByRole("textbox", { name: "Text" });
+    await textField.click();
+    await expect(textField).toBeFocused();
+
+    await presenter.bringToFront();
+    await presenter.getByTestId("clock").click();
+    await presenter.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    await expect(textField).not.toBeFocused();
+    await presenter.keyboard.press("g");
+
+    await expectOverviewClosed(presenter);
+    await expect(textField).not.toBeFocused();
+  });
+
+  test("OVW-R10.8 a component on the projector does not see keys while the presenter window shows the overview", async ({
+    page,
+  }) => {
+    await openDeckAt(page, "demo", "#/gallery");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    await expect(getCanvas(page).getByText("Image 1")).toBeVisible();
+
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    await page.keyboard.press("ArrowRight");
+
+    await expectSelection(presenter, 8);
+    await expect(getCanvas(page).getByText("Image 1")).toBeVisible();
+  });
 });
 
 test.describe("OVW-R11 Tab does nothing while the overview is open", () => {
@@ -1102,19 +1213,20 @@ test.describe("OVW-R12 shortcuts while the overview is open", () => {
     await expectOverviewOpen(page);
   });
 
-  test("OVW-R12.10 S opens the presenter window, which shows the overview too", async ({
+  test("OVW-R12.10 S opens the presenter window, which then shows the overview alone", async ({
     page,
   }) => {
     await openDeck(page, "seven-pages");
     await page.keyboard.press("g");
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("ArrowRight");
+    await expectSelection(page, 3);
 
     const presenter = await openPresenter(page);
 
-    await expectOverviewOpen(page);
     await expectOverviewOpen(presenter);
     await expectSelection(presenter, 3);
+    await expectOverviewClosed(page);
   });
 
   test("OVW-R12.12 page number 0 keeps the overview open", async ({ page }) => {
@@ -1146,6 +1258,68 @@ test.describe("OVW-R12 shortcuts while the overview is open", () => {
     await expectOverviewClosed(page);
     await expectSlide(page, "Page 3");
   });
+
+  test("OVW-R12.14 Space in the audience window scrolls nothing while the presenter window shows the overview", async ({
+    page,
+  }) => {
+    await openDeck(page, "forty-pages");
+    const presenter = await openPresenter(page);
+    await watchForOverview(page);
+    await page.bringToFront();
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    expect(await getOverviewScrollTop(presenter)).toBe(0);
+
+    await page.keyboard.press(" ");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await getOverviewScrollTop(presenter)).toBe(0);
+    await expectSelection(presenter, 1);
+    await expectOverviewOpen(presenter);
+    await expectSlide(page, "Page 1");
+    await expectOverviewNeverShown(page);
+  });
+
+  test("OVW-R12.15 Space and PageDown scroll nothing on the projector while the presenter window shows the overview", async ({
+    page,
+  }) => {
+    await openDeckAt(page, "capture-keys", "#/code");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    await getCanvas(page).getByLabel("Code block").click();
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+
+    await page.keyboard.press(" ");
+    await page.keyboard.press("PageDown");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await getCodeBlockScrollTop(page)).toBe(0);
+    await expectOverviewOpen(presenter);
+  });
+
+  test("OVW-R12.16 Backspace in the audience window does nothing while the presenter window shows the overview", async ({
+    page,
+  }) => {
+    await openDeck(page, "example");
+    const presenter = await openPresenter(page);
+    await watchForOverview(page);
+    await page.bringToFront();
+    await page.keyboard.press("ArrowRight");
+    await expectSlide(page, "Agenda");
+    await page.keyboard.press("End");
+    await expectSlide(page, "Summary");
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+
+    await page.keyboard.press("Backspace");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await expectSlide(page, "Summary");
+    await expect(page).toHaveURL(/#\/recap$/);
+    await expectOverviewOpen(presenter);
+    await expectOverviewNeverShown(page);
+  });
 });
 
 test.describe("OVW-R13 no black screen while the overview is open", () => {
@@ -1165,13 +1339,11 @@ test.describe("OVW-R13 no black screen while the overview is open", () => {
     await openDeck(page, "annual-review");
     const presenter = await openPresenter(page);
     await presenter.keyboard.press("g");
-    await expectOverviewOpen(page);
     await expectOverviewOpen(presenter);
 
     await presenter.keyboard.press("b");
 
-    await expectOverviewToStayOpen(page);
-    await expectOverviewOpen(presenter);
+    await expectOverviewToStayOpen(presenter);
     await expect(page.getByTestId("black-screen")).toHaveCount(0);
   });
 
@@ -1307,48 +1479,52 @@ test.describe("OVW-R16 reloading the deck closes the overview", () => {
 });
 
 test.describe("OVW-R17 both windows share one overview", () => {
-  test("OVW-R17.1 G in the presenter window opens the overview in both windows", async ({
+  test("OVW-R17.1 G in the presenter window opens the overview there alone", async ({
     page,
   }) => {
     await openDeck(page, "annual-review");
     const presenter = await openPresenter(page);
+    await watchForOverview(page);
 
     await presenter.keyboard.press("g");
 
-    await expectOverviewOpen(page);
     await expectOverviewOpen(presenter);
-    await expectSelection(page, 1);
     await expectSelection(presenter, 1);
+    await expectSlide(page, "Intro");
+    await expectOverviewNeverShown(page);
   });
 
-  test("OVW-R17.2 G in the audience window opens the overview in both windows", async ({
+  test("OVW-R17.2 G in the audience window opens the overview in the presenter window alone", async ({
     page,
   }) => {
     await openDeck(page, "annual-review");
     const presenter = await openPresenter(page);
+    await watchForOverview(page);
 
     await page.keyboard.press("g");
 
-    await expectOverviewOpen(page);
     await expectOverviewOpen(presenter);
+    await expectSlide(page, "Intro");
+    await expectOverviewNeverShown(page);
   });
 
-  test("OVW-R17.3 → in the presenter window moves both selections", async ({
+  test("OVW-R17.3 → in the presenter window moves its selection and leaves the slide", async ({
     page,
   }) => {
     await openDeck(page, "annual-review");
     const presenter = await openPresenter(page);
+    await watchForOverview(page);
     await presenter.keyboard.press("g");
     await expectOverviewOpen(presenter);
 
     await presenter.keyboard.press("ArrowRight");
 
-    await expectSelection(page, 2);
     await expectSelection(presenter, 2);
-    await expectOverviewOpen(page);
+    await expectSlide(page, "Intro");
+    await expectOverviewNeverShown(page);
   });
 
-  test("OVW-R17.4 Enter in the presenter window jumps and closes both overviews", async ({
+  test("OVW-R17.4 Enter in the presenter window jumps and closes the overview", async ({
     page,
   }) => {
     await openDeck(page, "annual-review");
@@ -1359,7 +1535,6 @@ test.describe("OVW-R17 both windows share one overview", () => {
     await presenter.keyboard.press("ArrowRight");
     await presenter.keyboard.press("Enter");
 
-    await expectOverviewClosed(page);
     await expectOverviewClosed(presenter);
     await expectSlide(page, "Agenda");
     await expectPresenterSlide(presenter, "current", "Agenda");
@@ -1375,12 +1550,11 @@ test.describe("OVW-R17 both windows share one overview", () => {
 
     await getThumbnail(presenter, 3).click();
 
-    await expectOverviewClosed(page);
     await expectOverviewClosed(presenter);
     await expectSlide(page, "Recap");
   });
 
-  test("OVW-R17.6 G in the presenter window closes the audience window's overview", async ({
+  test("OVW-R17.6 G in the presenter window closes the overview opened in the audience window", async ({
     page,
   }) => {
     await openDeck(page, "annual-review");
@@ -1391,13 +1565,16 @@ test.describe("OVW-R17 both windows share one overview", () => {
     await clickOverviewBackground(presenter);
     await presenter.keyboard.press("g");
 
-    await expectOverviewClosed(page);
     await expectOverviewClosed(presenter);
+    await expectPresenterSlide(presenter, "current", "Intro");
   });
 
-  test("OVW-R17.7 a reloaded presenter window shows the overview", async ({ page }) => {
+  test("OVW-R17.7 a reloaded presenter window shows its usual layout", async ({
+    page,
+  }) => {
     await openDeck(page, "annual-review");
     const presenter = await openPresenter(page);
+    await watchForOverview(page);
     await page.keyboard.press("g");
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("ArrowRight");
@@ -1405,13 +1582,13 @@ test.describe("OVW-R17 both windows share one overview", () => {
 
     await presenter.reload();
 
-    await expect(getOverview(presenter)).toBeVisible({ timeout: 1000 });
-    await expectSelection(presenter, 3, { timeout: 1000 });
+    await expect(presenter.getByTestId("slide-number")).toBeVisible({ timeout: 1000 });
+    await expectPresenterSlide(presenter, "current", "Intro");
+    await expect(getOverview(presenter)).toHaveCount(0);
+    await expectOverviewNeverShown(page);
   });
 
-  test("OVW-R17.8 a reloaded audience window closes both overviews", async ({
-    page,
-  }) => {
+  test("OVW-R17.8 a reloaded audience window closes the overview", async ({ page }) => {
     await openDeck(page, "annual-review");
     const presenter = await openPresenter(page);
     await page.keyboard.press("g");
@@ -1457,75 +1634,230 @@ test.describe("OVW-R17 both windows share one overview", () => {
 
     await holdKey(presenter, "Enter", 3);
 
-    await expectOverviewClosed(page);
     await expectOverviewClosed(presenter);
     await expect(page).toHaveURL(/#\/list$/);
     await new Promise((resolve) => setTimeout(resolve, 300));
     await expect(page).toHaveURL(/#\/list$/);
   });
+
+  test("OVW-R17.11 keys in the audience window work the presenter window's overview", async ({
+    page,
+  }) => {
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+    await watchForOverview(page);
+    await page.bringToFront();
+
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    await expectSelection(presenter, 1);
+    await expectSlide(page, "Intro");
+    await page.keyboard.press("ArrowRight");
+    await expectSelection(presenter, 2);
+    await expectSlide(page, "Intro");
+    await page.keyboard.press("Enter");
+
+    await expectOverviewClosed(presenter);
+    await expectSlide(page, "Agenda");
+    await expectOverviewNeverShown(page);
+  });
 });
 
-test.describe("OVW-R18 each window scrolls its own overview", () => {
-  test("OVW-R18.1 scrolling the presenter window's overview leaves the audience window's", async ({
+test.describe("OVW-R26 only the presenter window shows the overview while it is connected", () => {
+  test("OVW-R26.1 the projector never shows the overview", async ({ page }) => {
+    await openDeckAt(page, "steps", "#/list/1");
+    const presenter = await openPresenter(page);
+    await watchForOverview(page);
+
+    await presenter.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+    await presenter.keyboard.press("ArrowRight");
+
+    await expectSelection(presenter, 3);
+    await expectSlide(page, "List");
+    await expect(getCanvas(page).getByText("First point")).toBeVisible();
+    await expect(getCanvas(page).getByText("Second point")).toBeHidden();
+    await expectOverviewNeverShown(page);
+  });
+
+  test("OVW-R26.2 the audience window shows the overview while the builds differ", async ({
     page,
   }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1920, height: 1080 },
-      presenter: { width: 1280, height: 1000 },
-    });
+    const presenter = await openPresenterOfOlderBuild(page);
+
+    await page.keyboard.press("g");
+
+    await expectOverviewOpen(page);
+    await expect(getPresenterAlert(presenter)).toHaveText(VERSION_MISMATCH_NOTICE);
+  });
+
+  test("OVW-R26.3 a page number typed in the audience window shows on the projector", async ({
+    page,
+  }) => {
+    await openDeck(page, "annual-review");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
     await page.keyboard.press("g");
     await expectOverviewOpen(presenter);
 
-    await wheelOverview(presenter, 400);
-
-    await expect.poll(() => getOverviewScrollTop(presenter)).toBeGreaterThan(0);
+    await page.keyboard.press("3");
+    await expect(page.getByTestId("page-number")).toHaveText("3");
+    // Gives a digit wrongly sent to the presenter window the time to arrive.
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(await getOverviewScrollTop(page)).toBe(0);
+    await expect(presenter.getByTestId("presenter-page-number")).toHaveCount(0);
+    await page.keyboard.press("Enter");
+
+    await expectOverviewClosed(presenter);
+    await expectSlide(page, "Recap");
   });
 
-  test("OVW-R18.2 scrolling the audience window's overview leaves the presenter window's", async ({
+  test("keys that the browser handles and the wheel scroll nothing on the projector under the presenter window's overview", async ({
     page,
   }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1920, height: 1080 },
-      presenter: { width: 1280, height: 1000 },
-    });
+    await openDeckAt(page, "capture-keys", "#/code");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    const codeBlock = getCanvas(page).getByLabel("Code block");
+    await codeBlock.click();
     await page.keyboard.press("g");
     await expectOverviewOpen(presenter);
 
-    await wheelOverview(page, 400);
+    for (const key of ["Meta+ArrowDown", "Alt+ArrowDown", "Control+End"]) {
+      await page.keyboard.press(key);
+    }
+    // WebKit may still scroll a block that went inert less than 500 ms ago (architecture.md).
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const center = await getCenter(codeBlock);
+    await page.mouse.move(center.x, center.y);
+    await page.mouse.wheel(0, 400);
 
-    await expect.poll(() => getOverviewScrollTop(page)).toBeGreaterThan(0);
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(await getOverviewScrollTop(presenter)).toBe(0);
+    expect(await getCodeBlockScrollTop(page)).toBe(0);
   });
+});
 
-  test("OVW-R18.3 each window scrolls to the selection only when it must", async ({
+test.describe("OVW-R27 the presenter window leaving closes the overview", () => {
+  test("OVW-R27.1 closing the presenter window closes the overview", async ({
     page,
   }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1920, height: 1080 },
-      presenter: { width: 1280, height: 1000 },
-    });
+    await openDeck(page, "example");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    await watchForOverview(page);
+    await page.keyboard.press("g");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await expectSelection(presenter, 3);
+
+    await presenter.close();
+    await expectSlideUncovered(page);
+    await expectSlide(page, "Intro");
+    await page.keyboard.press("ArrowRight");
+
+    await expectSlide(page, "Agenda");
+    await expectOverviewNeverShown(page);
+  });
+
+  test("OVW-R27.2 closing the presenter window cancels the page number being typed", async ({
+    page,
+  }) => {
+    await installPausedClock(page);
+    await openDeck(page, "example");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
     await page.keyboard.press("g");
     await expectOverviewOpen(presenter);
-    await expectThumbnailFullyInView(presenter, 13);
+    await page.keyboard.press("3");
+    await expect(page.getByTestId("page-number")).toHaveText("3");
 
-    for (let count = 0; count < 3; count++) await presenter.keyboard.press("ArrowDown");
+    await presenter.close();
+    await expect(page.getByTestId("page-number")).toHaveCount(0);
+    await page.keyboard.press("Enter");
 
-    await expectSelection(page, 13);
-    await expectThumbnailFullyInView(page, 13);
-    await expectThumbnailFullyInView(presenter, 13);
-    expect(await getOverviewScrollTop(presenter)).toBe(0);
+    await expectSlide(page, "Agenda");
   });
 
-  test("OVW-R18.4 an arrow key in one window scrolls the other back to the selection", async ({
+  test("OVW-R27.3 the presenter window loading another page closes the overview", async ({
     page,
   }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1920, height: 1080 },
-      presenter: { width: 1280, height: 1000 },
-    });
+    await openDeck(page, "example");
+    const presenter = await openPresenter(page);
+    await page.bringToFront();
+    await watchForOverview(page);
+    await page.keyboard.press("g");
+    await expectOverviewOpen(presenter);
+
+    await presenter.goto("about:blank");
+    await expectSlideUncovered(page);
+    await expectSlide(page, "Intro");
+    await page.keyboard.press("ArrowRight");
+
+    await expectSlide(page, "Agenda");
+    await expectOverviewNeverShown(page);
+  });
+});
+
+test.describe("OVW-R28 an open overview moves to a presenter window that connects", () => {
+  test("OVW-R28.1 S in the overview moves it to the presenter window", async ({
+    page,
+  }) => {
+    await openDeck(page, "forty-pages");
+    await page.keyboard.press("g");
+    for (let count = 0; count < 9; count++) await page.keyboard.press("ArrowDown");
+    await expectSelection(page, 37);
+
+    const presenter = await openPresenter(page);
+
+    await expect(getOverview(presenter)).toBeVisible({ timeout: 1000 });
+    await expectSelection(presenter, 37, { timeout: 1000 });
+    await expectThumbnailFullyInView(presenter, 37, true, { timeout: 1000 });
+    await expectSlide(page, "Page 1");
+    await expectOverviewClosed(page);
+  });
+
+  test("OVW-R28.2 the overview moves to a presenter window that reloads into the same build", async ({
+    page,
+  }) => {
+    const presenter = await openPresenterOfOlderBuild(page);
+    await page.keyboard.press("g");
+    await page.keyboard.press("ArrowRight");
+    await expectSelection(page, 2);
+
+    await presenter.reload();
+
+    await expect(getOverview(presenter)).toBeVisible({ timeout: 1000 });
+    await expectSelection(presenter, 2, { timeout: 1000 });
+    await expectSlide(page, "Intro");
+    await expectOverviewClosed(page);
+  });
+
+  test("OVW-R28.3 the buttons hide 2 seconds after the overview moves", async ({
+    page,
+  }) => {
+    await installPausedClock(page);
+    await openDeck(page, "example");
+    await page.keyboard.press("g");
+    await expectOverviewOpen(page);
+    await page.clock.runFor(3000);
+    await expectButtonsShown(page, true);
+
+    const presenter = await openPresenter(page);
+    await expectOverviewOpen(presenter);
+    await expectOverviewClosed(page);
+    await expectButtonsShown(page, true);
+    await page.clock.runFor(1900);
+    await expectButtonsShown(page, true);
+    await page.clock.runFor(200);
+
+    await expectButtonsShown(page, false);
+  });
+});
+
+test.describe("OVW-R18 scrolling the overview in presenter mode", () => {
+  test("OVW-R18.4 an arrow key in the audience window scrolls the presenter window back to the selection", async ({
+    page,
+  }) => {
+    const presenter = await openPresenterWithSize(page, { width: 1280, height: 1000 });
     await page.keyboard.press("g");
     await expectOverviewOpen(presenter);
     await scrollOverviewToBottom(presenter);
@@ -1535,7 +1867,6 @@ test.describe("OVW-R18 each window scrolls its own overview", () => {
 
     await expectSelection(presenter, 2);
     await expectThumbnailFullyInView(presenter, 2);
-    expect(await getOverviewScrollTop(page)).toBe(0);
   });
 
   test("OVW-R18.5 Space scrolls the overview, not the notes clicked before", async ({
@@ -1579,50 +1910,10 @@ test.describe("OVW-R18 each window scrolls its own overview", () => {
     await expect(getPresenterAlert(presenter)).toHaveText("連線中斷");
   });
 
-  test("OVW-R18.7 a reloaded presenter window scrolls to the selection alone", async ({
+  test("OVW-R18.9 an arrow key at the edge in the audience window scrolls the presenter window to the selection", async ({
     page,
   }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1280, height: 1000 },
-      presenter: { width: 1920, height: 1080 },
-    });
-    await page.keyboard.press("g");
-    for (let count = 0; count < 3; count++) await page.keyboard.press("ArrowDown");
-    await expectSelection(page, 13);
-    await expectThumbnailFullyInView(page, 13);
-    expect(await getOverviewScrollTop(page)).toBe(0);
-
-    await presenter.reload();
-
-    await expect(getOverview(presenter)).toBeVisible({ timeout: 1000 });
-    await expectThumbnailFullyInView(presenter, 13, true, { timeout: 1000 });
-    expect(await getOverviewScrollTop(page)).toBe(0);
-  });
-
-  test("OVW-R18.8 resizing one window leaves the other's place in its rows", async ({
-    page,
-  }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1280, height: 720 },
-      presenter: { width: 1280, height: 1000 },
-    });
-    await page.keyboard.press("g");
-    await expectOverviewOpen(presenter);
-    await scrollOverviewToRow(presenter, 3, 0.5);
-
-    await page.setViewportSize({ width: 1920, height: 1080 });
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    await expectOverviewAtRow(presenter, 3, 0.5);
-  });
-
-  test("OVW-R18.9 an arrow key at the edge in one window scrolls the other to the selection", async ({
-    page,
-  }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1920, height: 1080 },
-      presenter: { width: 1280, height: 1000 },
-    });
+    const presenter = await openPresenterWithSize(page, { width: 1280, height: 1000 });
     await page.keyboard.press("g");
     await expectOverviewOpen(presenter);
     await scrollOverviewToBottom(presenter);
@@ -1637,40 +1928,37 @@ test.describe("OVW-R18 each window scrolls its own overview", () => {
   test("OVW-R18.10 a resize after the presenter window connects keeps the row it scrolled to", async ({
     page,
   }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1280, height: 1000 },
-      presenter: { width: 1920, height: 1080 },
-    });
+    await openDeck(page, "forty-pages");
     await page.keyboard.press("g");
-    for (let count = 0; count < 3; count++) await page.keyboard.press("ArrowDown");
-    await expectSelection(page, 13);
-    await presenter.reload();
-    await expectThumbnailFullyInView(presenter, 13);
+    for (let count = 0; count < 9; count++) await page.keyboard.press("ArrowDown");
+    await expectSelection(page, 37);
+    const presenter = await openPresenter(page);
+    await expectThumbnailFullyInView(presenter, 37);
     const { rowNumber, fraction } = await getOverviewRow(presenter);
     expect(await getOverviewScrollTop(presenter)).toBeGreaterThan(0);
+    const size = presenter.viewportSize();
+    if (size === null) throw new Error("The presenter window has no viewport size");
 
-    await presenter.setViewportSize({ width: 1280, height: 720 });
+    await presenter.setViewportSize({ width: size.width / 2, height: size.height / 2 });
 
     await expectOverviewAtRow(presenter, rowNumber, fraction);
     expect(await getOverviewScrollTop(presenter)).toBeGreaterThan(0);
   });
 
-  test("OVW-R18.11 an arrow key at the edge in the presenter window scrolls the audience window", async ({
+  test("OVW-R18.12 G in the audience window scrolls the presenter window to the current slide", async ({
     page,
   }) => {
-    const presenter = await openPresenterWithSizes(page, {
-      audience: { width: 1920, height: 1080 },
-      presenter: { width: 1280, height: 1000 },
-    });
+    await openDeckAt(page, "forty-pages", "#/page-37");
+    const presenter = await openPresenter(page);
+    await watchForOverview(page);
+    await page.bringToFront();
+
     await page.keyboard.press("g");
+
     await expectOverviewOpen(presenter);
-    await scrollOverviewToBottom(page);
-    await clickOverviewBackground(presenter);
-
-    await presenter.keyboard.press("ArrowLeft");
-
-    await expectSelection(page, 1);
-    await expectThumbnailFullyInView(page, 1);
+    await expectThumbnailFullyInView(presenter, 37);
+    await expectSlide(page, "Page 37");
+    await expectOverviewNeverShown(page);
   });
 });
 
@@ -1724,7 +2012,6 @@ test.describe("OVW-R19 the presenter window's overview covers the whole window",
 
     await presenter.mouse.click(center.x, center.y);
 
-    await expectOverviewClosed(page);
     await expectOverviewClosed(presenter);
     await expectSlide(page, `Page ${Number(slideIndex) + 1}`);
     await expect(presenter.getByTestId("presenter-page-number")).toHaveCount(0);
@@ -1748,7 +2035,6 @@ test.describe("OVW-R19 the presenter window's overview covers the whole window",
     await expect(page.getByTestId("page-number")).toHaveCount(0);
     await presenter.keyboard.press("Enter");
 
-    await expectOverviewClosed(page);
     await expectOverviewClosed(presenter);
     await expectSlide(page, "Recap");
   });
@@ -1965,19 +2251,48 @@ async function getNotesScrollTop(presenter: Page): Promise<number> {
   );
 }
 
-/** Opens `forty-pages` and its presenter window, each window at its own size. */
-async function openPresenterWithSizes(
+/** Opens `forty-pages` and its presenter window at a size. */
+async function openPresenterWithSize(
   page: Page,
-  sizes: {
-    audience: { width: number; height: number };
-    presenter: { width: number; height: number };
-  },
+  size: { width: number; height: number },
 ): Promise<Page> {
-  await page.setViewportSize(sizes.audience);
   await openDeck(page, "forty-pages");
   const presenter = await openPresenter(page);
-  await presenter.setViewportSize(sizes.presenter);
+  await presenter.setViewportSize(size);
   return presenter;
+}
+
+/** Records whether the audience window mounts the overview from now on. */
+async function watchForOverview(page: Page): Promise<void> {
+  await page.evaluate(`(() => {
+    const hasOverview = () => document.querySelector('[data-testid="overview"]') !== null;
+    window.hasShownOverview = hasOverview();
+    new MutationObserver(() => {
+      if (hasOverview()) window.hasShownOverview = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  })()`);
+}
+
+async function expectOverviewNeverShown(page: Page): Promise<void> {
+  expect(await page.evaluate<boolean>("window.hasShownOverview")).toBe(false);
+}
+
+/** Checks that the audience window's slide no longer sits in an `inert` element. */
+async function expectSlideUncovered(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate<boolean>(
+        `document.querySelector('[data-testid="canvas"]').closest("[inert]") !== null`,
+      ),
+    )
+    .toBe(false);
+}
+
+/** How far the code block of the `code` slide in the audience window has scrolled. */
+async function getCodeBlockScrollTop(page: Page): Promise<number> {
+  return page.evaluate<number>(
+    `document.querySelector('[data-testid="canvas"] [aria-label="Code block"]').scrollTop`,
+  );
 }
 
 /** Where the overview's top edge cuts its rows, by row number from 1 (OVW-R4). */

@@ -31,6 +31,7 @@ import {
   getOverviewShortcut,
   getShortcut,
   isFocusMovingKey,
+  isOverviewScrollKey,
   isPageNumberInDeck,
   isRepeatable,
   makeEnterKeyTracker,
@@ -57,6 +58,8 @@ import { useSwipe } from "./swipe";
  *
  * This window is the audience window of presenter mode, and the source of truth for the
  * presenter window it opens with `S` (PRES-R1, PRES-R2), including the overview (OVW-R17).
+ * While that window is connected, only it shows the open overview, and this window keeps the
+ * slide on screen, still covered for clicks, keys, and focus (OVW-R26, OVW-R10).
  */
 export function Player({ deck }: { deck: Deck }) {
   const slideIds = deck.slides.map((slide) => slide.id);
@@ -73,9 +76,13 @@ export function Player({ deck }: { deck: Deck }) {
   const slideLayerRef = useRef<HTMLDivElement>(null);
   const overviewRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
+  const focusHolderRef = useRef<HTMLDivElement>(null);
   const [enterKeyTracker] = useState(makeEnterKeyTracker);
   const slide = getSlide(deck, state.slideIndex);
   const isOverviewOpen = state.overview !== null;
+  const shownOverview = state.isPresenterConnected ? null : state.overview;
+  const isOverviewShown = shownOverview !== null;
+  const isOverviewElsewhere = isOverviewOpen && !isOverviewShown;
   const position: AudiencePosition | null =
     state.stepCheck === null
       ? {
@@ -92,9 +99,15 @@ export function Player({ deck }: { deck: Deck }) {
     // Renders each command before the next message arrives, since a command reads the
     // state, like a second key would (see showStep).
     runCommand: (command) => flushSync(() => runPresenterCommand(command)),
+    // Renders the change before the next message arrives, or a command that opens the overview
+    // right after the presenter window connects could show the overview here for a frame.
+    onConnectionChange: (isConnected) =>
+      flushSync(() =>
+        dispatch({ type: isConnected ? "connect-presenter" : "disconnect-presenter" }),
+      ),
   });
   const isOverviewMounted = useOverviewTransition({
-    isOpen: isOverviewOpen,
+    isOpen: isOverviewShown,
     slideIndex: state.slideIndex,
     slideLayerRef,
     overviewRef,
@@ -371,13 +384,19 @@ export function Player({ deck }: { deck: Deck }) {
   function handleOverviewKeyDown(event: KeyboardEvent): void {
     // Keeps focus off the buttons and the address bar (OVW-R11).
     if (isFocusMovingKey(event)) return event.preventDefault();
-    const shortcut = getOverviewShortcut(event, {
-      isTypingPageNumber: state.pageNumberDigits !== "",
-    });
-    if (shortcut === null) return;
+    const isTypingPageNumber = state.pageNumberDigits !== "";
+    const shortcut = getOverviewShortcut(event, { isTypingPageNumber });
+    if (shortcut === null) {
+      // Keeps these keys from scrolling anything in this window, which shows no overview while
+      // the presenter window does (OVW-R12, OVW-R18).
+      if (isOverviewElsewhere && isOverviewScrollKey(event, { isTypingPageNumber })) {
+        event.preventDefault();
+      }
+      return;
+    }
     event.preventDefault();
     if (event.repeat && !isRepeatable(shortcut.type)) return;
-    if (state.pageNumberDigits !== "") {
+    if (isTypingPageNumber) {
       if (shortcut.type === "digit" || shortcut.type === "delete-page-number-digit") {
         return runOverviewShortcut(shortcut, event.key);
       }
@@ -453,11 +472,19 @@ export function Player({ deck }: { deck: Deck }) {
     return () => clearTimeout(timer);
   }, [state.pageNumberDigits]);
 
-  // The buttons stay shown while the overview is open and for 2 seconds after it closes
+  // The buttons stay shown while this window shows the overview and for 2 seconds after it stops
   // (OVW-R3). On the first render, this restarts the 2 seconds that the deck starts with.
   useEffect(() => {
-    if (!isOverviewOpen) reportActivity();
-  }, [isOverviewOpen, reportActivity]);
+    if (!isOverviewShown) reportActivity();
+  }, [isOverviewShown, reportActivity]);
+
+  // Leaves the focus on the body once the overview closes, as an overview shown here does.
+  useLayoutEffect(() => {
+    const focusHolder = focusHolderRef.current;
+    if (focusHolder === null) throw new Error("The focus holder is not mounted");
+    if (isOverviewElsewhere) focusHolder.focus({ preventScroll: true });
+    else if (document.activeElement === focusHolder) focusHolder.blur();
+  }, [isOverviewElsewhere]);
 
   useSwipe({
     onSwipe: (direction: SwipeDirection) => {
@@ -488,7 +515,12 @@ export function Player({ deck }: { deck: Deck }) {
       className="fixed inset-0"
       data-cursor-hidden={isUserActive ? undefined : ""}
     >
-      {/* Inert under the overview, so nothing on the slide takes clicks or focus (OVW-R10). */}
+      {/* Holds focus while only the presenter window shows the overview, so keys that the
+          browser handles, such as Cmd+↓, scroll nothing that the speaker clicked on the slide
+          before (OVW-R26). */}
+      <div ref={focusHolderRef} tabIndex={-1} className="outline-none" />
+      {/* Inert while the overview is open, even when only the presenter window shows it, so
+          nothing on the slide takes clicks or focus (OVW-R10). */}
       <div
         ref={slideLayerRef}
         inert={isOverviewOpen}
@@ -513,9 +545,9 @@ export function Player({ deck }: { deck: Deck }) {
           ref={overviewRef}
           slides={deck.slides}
           currentSlideIndex={state.slideIndex}
-          selectedSlideIndex={state.overview?.selectedSlideIndex ?? null}
-          isOpen={isOverviewOpen}
-          revealKey={state.overview?.arrowKeyCount ?? 0}
+          selectedSlideIndex={shownOverview?.selectedSlideIndex ?? null}
+          isOpen={isOverviewShown}
+          revealKey={shownOverview?.arrowKeyCount ?? 0}
           getCoveredRect={() => buttonsRef.current?.getBoundingClientRect() ?? null}
           onThumbnailClick={goToOverviewSlide}
         />
@@ -527,7 +559,7 @@ export function Player({ deck }: { deck: Deck }) {
         )}
         <PlayerButtons
           ref={buttonsRef}
-          isVisible={isUserActive || isOverviewOpen}
+          isVisible={isUserActive || isOverviewShown}
           isOverviewOpen={isOverviewOpen}
           onOverviewClick={() => {
             if (state.isBlackScreen) dispatch({ type: "end-black-screen" });

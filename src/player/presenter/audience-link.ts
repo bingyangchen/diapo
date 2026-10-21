@@ -38,18 +38,21 @@ type PresenterConnection = {
  * (PRES-R9).
  *
  * `position` is null while the player checks a step, so the presenter window never shows a
- * step the slide may not have.
+ * step the slide may not have. `onConnectionChange` runs whenever the connection to a presenter
+ * window of the same build starts or ends (OVW-R26).
  */
 export function useAudienceLink({
   deck,
   position,
   stepRegistry,
   runCommand,
+  onConnectionChange,
 }: {
   deck: Deck;
   position: AudiencePosition | null;
   stepRegistry: StepRegistry;
   runCommand: (command: PlayerCommand) => void;
+  onConnectionChange: (isConnected: boolean) => void;
 }): { openPresenterWindow: () => void } {
   const connectionRef = useRef<PresenterConnection>({
     presenterWindow: null,
@@ -67,6 +70,13 @@ export function useAudienceLink({
     readElapsedStartTime(deck.id),
   );
   const lastPositionRef = useRef<AudiencePosition | null>(null);
+
+  function setConnection(connection: PresenterConnection): void {
+    const wasConnected = connectionRef.current.isConnected;
+    connectionRef.current = connection;
+    if (connection.isConnected !== wasConnected)
+      onConnectionChange(connection.isConnected);
+  }
 
   function makeState(settledPosition: AudiencePosition): AudienceState {
     return {
@@ -108,15 +118,15 @@ export function useAudienceLink({
     const source = event.source as Window | null;
     if (source === null) {
       if (message.type === "leave") {
-        connectionRef.current = { ...connectionRef.current, isConnected: false };
+        setConnection({ ...connectionRef.current, isConnected: false });
       }
       return;
     }
     if (message.type === "connect") {
-      connectionRef.current = {
+      setConnection({
         presenterWindow: source,
         isConnected: message.deckId === deck.id && message.buildId === deck.buildId,
-      };
+      });
       // Answers a presenter window of another deck or build too, so it can tell (PRES-R12,
       // PRES-R13). While the step is unsettled, the presenter window asks again.
       if (position !== null) {
@@ -127,7 +137,7 @@ export function useAudienceLink({
     const { presenterWindow, isConnected } = connectionRef.current;
     if (source !== presenterWindow) return;
     if (message.type === "leave") {
-      connectionRef.current = { presenterWindow, isConnected: false };
+      setConnection({ presenterWindow, isConnected: false });
       return;
     }
     if (!isConnected) return;
@@ -147,7 +157,7 @@ export function useAudienceLink({
     if (presenterWindow !== null && !presenterWindow.closed) {
       postToPresenter(presenterWindow, { type: "leave" });
     }
-    connectionRef.current = { presenterWindow, isConnected: false };
+    setConnection({ presenterWindow, isConnected: false });
   });
 
   useEffect(() => {
@@ -216,7 +226,7 @@ export function useAudienceLink({
       }
       const openedWindow = findOrOpenPresenterWindow();
       if (openedWindow !== null) {
-        connectionRef.current = { presenterWindow: openedWindow, isConnected: false };
+        setConnection({ presenterWindow: openedWindow, isConnected: false });
       }
     },
   };

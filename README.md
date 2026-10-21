@@ -143,7 +143,7 @@ The overview shows every slide as a thumbnail of its last step, four to a row. M
 
 ### Presenter Mode
 
-Press S in the window that plays the deck to open the presenter window, which shows the current slide, the next step, the next slide, the speaker notes, the elapsed time, and the time of day. Keys and the presenter remote work in either window, and both windows follow the same slide and share the overview, so opening it in the presenter window also shows it on the projector; after either window reloads, they reconnect on their own.
+Press S in the window that plays the deck to open the presenter window, which shows the current slide, the next step, the next slide, the speaker notes, the elapsed time, and the time of day. Keys and the presenter remote work in either window, and both windows follow the same slide. While the presenter window is open, the overview shows only there and the projector keeps showing the current slide; keys pressed in either window still move through that overview. After either window reloads, they reconnect on their own.
 
 1. Connect the projector and set the displays to extend the desktop, not to mirror it. On macOS, keep "Displays have separate Spaces" on in System Settings > Desktop & Dock, or a window going fullscreen on one display blacks out the other.
 2. Press S, then drag the deck window to the projector and press F there. The presenter window stays on your laptop.
