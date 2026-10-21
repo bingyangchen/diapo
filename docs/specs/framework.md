@@ -10,7 +10,7 @@ prefix: FRAME
 - `slides/`：每一頁寫成一個 TSX 檔，檔名是 `<slide-id>.tsx`，檔名去掉 `.tsx` 就是這一頁的 slide ID。TSX 檔用 default export 匯出一個沒有 props 的 React 元件，元件撐滿 1920×1080 的畫布。TSX 檔也可以用 `notes` 匯出這一頁的講者備註（FRAME-R6）。
 - `assets/`：放圖片、影片等素材，TSX 檔用 `import` 取得素材的網址。
 
-> 設計理由：每頁用 default export 匯出沒有 props 的 React 元件，因為這是 AI 最熟悉的 React 寫法。換頁效果這類每頁的設定，由各自的 plan 決定寫法。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+> 設計理由：每頁用 default export 匯出沒有 props 的 React 元件，因為這是 AI 最熟悉的 React 寫法。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
 簡報目錄不符合本 spec 的規則時 build 失敗，錯誤訊息寫出 deck ID 與原因。
 
@@ -29,7 +29,7 @@ prefix: FRAME
   - 動作：Build
   - 結果：Build 失敗，錯誤訊息寫出 `slides`
 
-> 設計理由：頁面順序寫在 `deck.json`，而不是用檔名的編號前綴決定，因為 roadmap 的「排序與隱藏」會在本機把拖曳排序的結果寫回簡報，用編號前綴的話，dev server 每次排序都要一次改好幾個檔名。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
+> 設計理由：頁面順序寫在 `deck.json`，而不是用檔名的編號前綴決定，因為 roadmap 的「開發時排序」會在本機把拖曳排序的結果寫回簡報，用編號前綴的話，dev server 每次排序都要一次改好幾個檔名。完整討論見 [0001](../plans/archive/0001-project-foundation.md)。
 
 ### FRAME-R2 `deck.json` 只接受定義過的欄位
 
@@ -38,7 +38,7 @@ prefix: FRAME
 | 欄位 | 必填 | 內容 |
 | --- | --- | --- |
 | `title` | 是 | 簡報標題，不能是空字串，也不能只有空白 |
-| `publish` | 否 | `true` 或 `false`。設成 `false` 時，部署用的 build 會排除這份簡報（DIST-R5）；沒有設定時視為 `true` |
+| `publish` | 否 | `true` 或 `false`，作用與預設值寫在 [distribution.md](distribution.md) 的 DIST-R5 |
 | `slides` | 是 | Slide ID 的陣列，規則寫在 FRAME-R1 與 FRAME-R4 |
 
 - FRAME-R2.1 欄位名稱拼錯
@@ -92,11 +92,11 @@ Deck ID 與 slide ID 只能用小寫英數字與 `-`，而且 `-` 不能出現�
   - 動作：Build
   - 結果：Build 失敗，錯誤訊息寫出 `intro`，並寫出讓同一頁出現兩次的做法：另外建一個 TSX 檔，內容寫成 `export { default } from "./intro";`
 
-> 設計理由：播放器把 slide ID 寫進網址的 hash（[navigation.md](navigation.md) 的 NAV-R1），讓指向某一頁的連結在頁面順序調整後仍然指向同一頁，所以一個 slide ID 只能對應一頁。允許重複的話，hash 要另外記錄這是第幾次出現，例如 `#/agenda~2`，而在第二個 `agenda` 之前再插入一次 `agenda` 之後，舊連結的 `~2` 就會指到另一次出現的位置。錯誤訊息寫出重新匯出的做法，因為 AI 製作簡報時通常不會先讀 spec，而是從 build 的錯誤訊息知道怎麼修正。「排序與隱藏」的 plan 決定現場隱藏的頁面怎麼存進瀏覽器時，再評估一次要不要允許重複；現在先禁止重複，之後要放寬時，既有的簡報不受影響。完整討論見 [0001](../plans/archive/0001-project-foundation.md) 與 [0002](../plans/archive/0002-navigation.md)。
+> 設計理由：播放器把 slide ID 寫進網址的 hash（[navigation.md](navigation.md) 的 NAV-R1），讓指向某一頁的連結在頁面順序調整後仍然指向同一頁，所以一個 slide ID 只能對應一頁。允許重複的話，hash 要另外記錄這是第幾次出現，例如 `#/agenda~2`，而在第二個 `agenda` 之前再插入一次 `agenda` 之後，舊連結的 `~2` 就會指到另一次出現的位置。錯誤訊息寫出重新匯出的做法，因為 AI 製作簡報時通常不會先讀 spec，而是從 build 的錯誤訊息知道怎麼修正。現在先禁止重複，之後要放寬時，既有的簡報不受影響。完整討論見 [0001](../plans/archive/0001-project-foundation.md) 與 [0002](../plans/archive/0002-navigation.md)。
 
 ### FRAME-R5 沒有用到的頁面不會打包進 Slidetray
 
-`slides/` 目錄裡沒有列在 `deck.json` 的 `slides`、也沒有被列出的頁面直接或間接 import 的 TSX 檔，不會打包進 slidetray。
+`slides/` 目錄裡沒有列在 `deck.json` 的 `slides`、也沒有被列出的頁面直接或間接 import 的 TSX 檔，不會打包進 slidetray。不過這些檔案用到的 Tailwind class 仍會寫進 slidetray 的 CSS，包括 `content-['…']` 這類 arbitrary value 裡的文字。
 
 - FRAME-R5.1 沒有列在 `slides` 的頁面
   - 前提：`slides/` 目錄底下有 `draft.tsx`，但 `deck.json` 的 `slides` 沒有列出 `draft`
@@ -110,6 +110,10 @@ Deck ID 與 slide ID 只能用小寫英數字與 `-`，而且 `-` 不能出現�
   - 前提：`deck.json` 的 `slides` 只列出 `recap`；`recap.tsx` 的內容是 `export { default } from "./summary";`，`summary.tsx` 的內容是 `export { default } from "./summary-v1";`
   - 動作：Build
   - 結果：Build 成功，slidetray 裡有 `summary-v1.tsx` 的內容
+- FRAME-R5.4 沒有列在 `slides` 的頁面用到的 class
+  - 前提：`slides/` 目錄底下有 `draft.tsx`，`deck.json` 的 `slides` 沒有列出 `draft`，`draft.tsx` 用了 `content-['unlisted-draft-marker']`，其他頁面都沒有用到這個 class
+  - 動作：Build
+  - 結果：Build 成功，slidetray 的 CSS 裡有 `unlisted-draft-marker`
 
 ### FRAME-R6 用 `notes` 匯出講者備註
 
@@ -126,7 +130,7 @@ export default function Agenda() {
 }
 ```
 
-備註通常寫成 template literal，這時 Markdown 的反引號要寫成 `` \` ``，`${` 要寫成 `\${`，反斜線要寫成 `\\`，例如 Markdown 的 `\*` 要寫成 `\\*`。只有一行的備註也可以寫成引號字串，例如 `export const notes = "先問觀眾";`，這時反斜線一樣要寫成 `\\`，和外層相同的引號要寫成 `\"` 或 `\'`，另一種引號直接寫；引號字串不能換行，所以要換行的備註都寫成 template literal。`notes` 的其他規則寫在 FRAME-R7。照 FRAME-R4 讓同一頁出現兩次時，`export { default } from "./agenda";` 不會帶上 `agenda` 的備註；要沿用 `agenda` 的備註時，寫成 `export { default, notes } from "./agenda";`。
+`notes` 的寫法與跳脫規則寫在 FRAME-R7。照 FRAME-R4 讓同一頁出現兩次時，`export { default } from "./agenda";` 不會帶上 `agenda` 的備註；要沿用 `agenda` 的備註時，寫成 `export { default, notes } from "./agenda";`。
 
 備註會打包進 slidetray，所以發布到網站的簡報，任何人開啟後按 `S` 都看得到備註。
 
@@ -149,7 +153,7 @@ export default function Agenda() {
 
 ### FRAME-R7 `notes` 的寫法不符規則時 build 失敗
 
-`deck.json` 列出的頁面，以及這些頁面直接或間接 import 的 `slides/` 目錄裡的 TSX 檔，也就是 `slides/` 目錄裡會打包進 slidetray 的 TSX 檔（FRAME-R5），匯出 `notes` 時只能用下列寫法：
+`slides/` 目錄裡會打包進 slidetray 的 TSX 檔（FRAME-R5），匯出 `notes` 時只能用下列寫法：
 
 1. 用 `export const notes` 宣告，值是用引號寫成的字串，或沒有 `${...}` 的 template literal。其他運算式，例如字串相加或其他檔案的常數，都不符合規則。字串裡的跳脫寫法只能是 `\\`、template literal 裡的 `` \` `` 與 `\$`，以及引號字串裡跳脫外層引號的寫法，也就是雙引號字串裡的 `\"` 與單引號字串裡的 `\'`。`notes` 後面可以加上 TypeScript 的型別註記 `: string`，值的後面也可以加上 `as const` 或 `satisfies string`，這些寫法不影響檢查；用 `export let` 或 `export var` 宣告則不符合規則。
 2. 從 `slides/` 目錄裡的其他 TSX 檔重新匯出：在 `export { ... } from "./<檔名>"` 的清單裡直接列出 `notes`，例如 `export { notes } from "./agenda"` 或 `export { default, notes } from "./agenda"`，不能把其他名稱改名成 `notes`。被匯出的檔案也可以再用這種寫法，從另一個檔案重新匯出。
