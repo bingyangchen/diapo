@@ -2,7 +2,9 @@
 
 這份檔案列出 [presenter.md](../../docs/specs/presenter.md) 裡需要手動檢查的情境。改到和這些情境有關的程式碼時，照下面的步驟檢查，並把結果寫在 PR 的「手動檢查」。
 
-下面的步驟都用測試用的簡報，因為這些簡報的頁面名稱和 spec 的情境相同：`annual-review`（標題是「年度回顧」）依序是 Intro、Agenda、Recap、Thanks 四頁，四頁都沒有頁內分步，Agenda、Recap、Thanks 都有比備註區長的備註。檢查之前先執行 `make build DECKS_DIR=tests/fixtures/decks`。步驟裡的「開啟簡報」指用瀏覽器開啟 `dist/annual-review/index.html`；要從網站開啟簡報時，再執行 `make serve`，步驟裡的 `<Local 網址>` 指這個指令在終端機印出的 Local 網址，通常是 `http://localhost:4173/`。
+下面的步驟都用測試用的簡報，因為這些簡報的頁面名稱和 spec 的情境相同：`annual-review`（標題是「年度回顧」）依序是 Intro、Agenda、Recap、Thanks 四頁，四頁都沒有頁內分步，Agenda、Recap、Thanks 都有比備註區長的備註。檢查之前先執行 `make build DECKS_DIR=tests/fixtures/decks`。
+
+步驟裡的「開啟簡報」指用瀏覽器開啟 `dist/annual-review/index.html`；要從網站開啟簡報時，再執行 `make serve`，步驟裡的 `<Local 網址>` 指這個指令在終端機印出的 Local 網址，通常是 `http://localhost:4173/`。
 
 需要投影幕的步驟，用另一台螢幕代替投影幕，並在作業系統的顯示器設定裡設成延伸桌面；在 macOS 上，「系統設定」裡「桌面與 Dock」的「顯示器有不同的空間」要開著。
 

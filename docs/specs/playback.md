@@ -14,6 +14,8 @@ prefix: PLAY
 
 開啟一份簡報、網址的 hash 沒有指定頁面時，畫面顯示簡報設定檔 `deck.json` 裡頁面順序的第一頁。網址的 hash 指定頁面時的行為寫在 [navigation.md](navigation.md) 的 NAV-R1 與 NAV-R2。
 
+情境：
+
 - PLAY-R1.1 開啟簡報
   - 前提：`deck.json` 依序列出 `intro`、`agenda` 兩頁
   - 動作：開啟這份簡報，網址沒有 hash
@@ -22,6 +24,8 @@ prefix: PLAY
 ### PLAY-R2 畫布等比縮放
 
 畫布等比縮放到瀏覽器視窗能容納的最大尺寸並置中，畫布以外的區域顯示黑色。
+
+情境：
 
 - PLAY-R2.1 視窗比例是 16:9
   - 前提：瀏覽器視窗是 1280×720
@@ -41,6 +45,8 @@ prefix: PLAY
 ### PLAY-R3 瀏覽器分頁顯示簡報標題
 
 開啟一份簡報時，瀏覽器分頁的標題和 `deck.json` 的 `title` 完全相同。
+
+情境：
 
 - PLAY-R3.1 開啟簡報
   - 前提：`deck.json` 的 `title` 是 `年度回顧`
