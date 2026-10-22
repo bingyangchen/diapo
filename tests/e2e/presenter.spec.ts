@@ -2118,7 +2118,7 @@ test.describe("PRES-R12 the presenter window keeps its last screen while disconn
     await expect(getPresenterAlert(presenter)).toBeHidden();
     await expectPresenterSlide(presenter, "current", "Intro");
     await expect(presenter.getByTestId("slide-number")).toHaveText("第 1 / 4 頁");
-    await page.clock.runFor(4000);
+    await page.clock.fastForward(4000);
     await expect(getElapsedTime(presenter)).toHaveText("12:39");
   });
 
@@ -2349,6 +2349,12 @@ async function getFocusedTag(page: Page): Promise<string> {
  * `page.clock.runFor()` or `page.clock.fastForward()`, and the elapsed time shows exact
  * seconds. The clock covers every window of the browser context, including the presenter
  * window.
+ *
+ * After the elapsed time mounts again, such as when the presenter window reloads or
+ * reconnects, move the clock with `fastForward()` right before checking it. The presenter
+ * window refreshes it every 200 ms, counted from when it mounts, and `runFor()` fires each
+ * refresh at its own time, so the last refresh can land before the target second and the
+ * elapsed time still shows the previous one.
  */
 async function installPausedClock(
   page: Page,
