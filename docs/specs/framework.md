@@ -20,6 +20,8 @@ prefix: FRAME
 
 `deck.json` 的 `slides` 依播放順序列出 slide ID，至少要有一頁，每個 slide ID 都要有對應的 `slides/<slide-id>.tsx`。
 
+情境：
+
 - FRAME-R1.1 頁面的 TSX 檔不存在
   - 前提：`deck.json` 的 `slides` 列出 `agenda`，但 `slides/` 目錄底下沒有 `agenda.tsx`
   - 動作：Build
@@ -40,6 +42,8 @@ prefix: FRAME
 | `title` | 是 | 簡報標題，不能是空字串，也不能只有空白 |
 | `publish` | 否 | `true` 或 `false`，作用與預設值寫在 [distribution.md](distribution.md) 的 DIST-R5 |
 | `slides` | 是 | Slide ID 的陣列，規則寫在 FRAME-R1 與 FRAME-R4 |
+
+情境：
 
 - FRAME-R2.1 欄位名稱拼錯
   - 前提：`deck.json` 把 `publish: false` 寫成 `pubish: false`
@@ -72,6 +76,8 @@ prefix: FRAME
 
 Deck ID 與 slide ID 只能用小寫英數字與 `-`，而且 `-` 不能出現在開頭、結尾，也不能連續出現。
 
+情境：
+
 - FRAME-R3.1 Deck ID 格式不符
   - 前提：`decks/` 底下有一個叫 `_assets` 的簡報目錄
   - 動作：Build
@@ -87,16 +93,24 @@ Deck ID 與 slide ID 只能用小寫英數字與 `-`，而且 `-` 不能出現�
 
 同一個 slide ID 在 `deck.json` 的 `slides` 裡只能出現一次。同一頁要在簡報裡出現兩次時，另外建一個 TSX 檔重新匯出那一頁，例如 `agenda` 要出現兩次時，新增 `slides/agenda-recap.tsx`，內容寫成 `export { default } from "./agenda";`，再把 `agenda-recap` 列進 `slides`。這兩頁顯示同一個元件，所以修改 `agenda.tsx` 時，兩次出現的地方會一起改變。
 
+情境：
+
 - FRAME-R4.1 Slide ID 重複
   - 前提：`deck.json` 的 `slides` 是 `["intro", "agenda", "intro"]`
   - 動作：Build
   - 結果：Build 失敗，錯誤訊息寫出 `intro`，並寫出讓同一頁出現兩次的做法：另外建一個 TSX 檔，內容寫成 `export { default } from "./intro";`
 
-> 設計理由：播放器把 slide ID 寫進網址的 hash（[navigation.md](navigation.md) 的 NAV-R1），讓指向某一頁的連結在頁面順序調整後仍然指向同一頁，所以一個 slide ID 只能對應一頁。允許重複的話，hash 要另外記錄這是第幾次出現，例如 `#/agenda~2`，而在第二個 `agenda` 之前再插入一次 `agenda` 之後，舊連結的 `~2` 就會指到另一次出現的位置。錯誤訊息寫出重新匯出的做法，因為 AI 製作簡報時通常不會先讀 spec，而是從 build 的錯誤訊息知道怎麼修正。現在先禁止重複，之後要放寬時，既有的簡報不受影響。完整討論見 [0001](../plans/archive/0001-project-foundation.md) 與 [0002](../plans/archive/0002-navigation.md)。
+> 設計理由：播放器把 slide ID 寫進網址的 hash（[navigation.md](navigation.md) 的 NAV-R1），讓指向某一頁的連結在頁面順序調整後仍然指向同一頁，所以一個 slide ID 只能對應一頁。
+>
+> 允許重複的話，hash 要另外記錄這是第幾次出現，例如 `#/agenda~2`，而在第二個 `agenda` 之前再插入一次 `agenda` 之後，舊連結的 `~2` 就會指到另一次出現的位置。現在先禁止重複，之後要放寬時，既有的簡報不受影響。
+>
+> 錯誤訊息寫出重新匯出的做法，因為 AI 製作簡報時通常不會先讀 spec，而是從 build 的錯誤訊息知道怎麼修正。完整討論見 [0001](../plans/archive/0001-project-foundation.md) 與 [0002](../plans/archive/0002-navigation.md)。
 
 ### FRAME-R5 沒有用到的頁面不會打包進 Slidetray
 
 `slides/` 目錄裡沒有列在 `deck.json` 的 `slides`、也沒有被列出的頁面直接或間接 import 的 TSX 檔，不會打包進 slidetray。不過這些檔案用到的 Tailwind class 仍會寫進 slidetray 的 CSS，包括 `content-['…']` 這類 arbitrary value 裡的文字。
+
+情境：
 
 - FRAME-R5.1 沒有列在 `slides` 的頁面
   - 前提：`slides/` 目錄底下有 `draft.tsx`，但 `deck.json` 的 `slides` 沒有列出 `draft`
@@ -136,6 +150,8 @@ export default function Agenda() {
 
 > 設計理由：部署到網站時不拿掉備註，因為部署網站的 repo 是公開的（DIST-R5 的設計理由），備註寫在 repo 的 TSX 檔裡，拿掉 slidetray 裡的備註也擋不住別人在 GitHub 上讀到，而且講者從網站播放簡報時就沒有備註可看。備註有不能公開的內容時，照 DIST-R5 的設計理由把 repo 改成 private，並設定 `publish: false`。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
 
+情境：
+
 - FRAME-R6.1 備註裡的反引號
   - 前提：`agenda` 的 `notes` 寫了 `` 強調 \`useStep\` ``
   - 動作：Build，在觀眾視窗顯示 `agenda` 時按 `S`
@@ -149,13 +165,23 @@ export default function Agenda() {
   - 動作：在觀眾視窗顯示 `agenda-recap` 時按 `S`
   - 結果：講者視窗的備註區顯示 `agenda` 的備註
 
-> 設計理由：備註寫成具名匯出的字串，要換行的備註寫成 template literal，因為 JSX 會把文字裡的換行與縮排併成一個空白，而 Markdown 的清單與段落都靠換行。曾考慮用 `<Notes>` 元件把備註寫在頁面的 JSX 裡，但 template literal 會跟著 JSX 縮排，而 Markdown 把縮排 4 格以上的行當成程式碼區塊，AI 容易寫錯，播放器也要先 render 那一頁才讀得到備註；也考慮過寫成元件的屬性，例如 `Agenda.notes = ...`，但這不是常見的 React 寫法。具名匯出的代價是 `@vitejs/plugin-react` 只在檔案匯出的全都是元件時才熱更新，所以用 `make dev` 修改有 `notes` 的頁面時，整頁會重新載入。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
+> 設計理由：備註寫成具名匯出的字串，要換行的備註寫成 template literal，因為 JSX 會把文字裡的換行與縮排併成一個空白，而 Markdown 的清單與段落都靠換行。
+>
+> 曾考慮用 `<Notes>` 元件把備註寫在頁面的 JSX 裡，但 template literal 會跟著 JSX 縮排，而 Markdown 把縮排 4 格以上的行當成程式碼區塊，AI 容易寫錯，播放器也要先 render 那一頁才讀得到備註。
+>
+> 也考慮過寫成元件的屬性，例如 `Agenda.notes = ...`，但這不是常見的 React 寫法。
+>
+> 具名匯出的代價是 `@vitejs/plugin-react` 只在檔案匯出的全都是元件時才熱更新，所以用 `make dev` 修改有 `notes` 的頁面時，整頁會重新載入。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
 
 ### FRAME-R7 `notes` 的寫法不符規則時 build 失敗
 
 `slides/` 目錄裡會打包進 slidetray 的 TSX 檔（FRAME-R5），匯出 `notes` 時只能用下列寫法：
 
-1. 用 `export const notes` 宣告，值是用引號寫成的字串，或沒有 `${...}` 的 template literal。其他運算式，例如字串相加或其他檔案的常數，都不符合規則。字串裡的跳脫寫法只能是 `\\`、template literal 裡的 `` \` `` 與 `\$`，以及引號字串裡跳脫外層引號的寫法，也就是雙引號字串裡的 `\"` 與單引號字串裡的 `\'`。`notes` 後面可以加上 TypeScript 的型別註記 `: string`，值的後面也可以加上 `as const` 或 `satisfies string`，這些寫法不影響檢查；用 `export let` 或 `export var` 宣告則不符合規則。
+1. 用 `export const notes` 宣告，值是用引號寫成的字串，或沒有 `${...}` 的 template literal。這種寫法另有以下規則：
+   - 其他運算式，例如字串相加或其他檔案的常數，都不符合規則。
+   - 字串裡的跳脫寫法只能是 `\\`、template literal 裡的 `` \` `` 與 `\$`，以及引號字串裡跳脫外層引號的寫法，也就是雙引號字串裡的 `\"` 與單引號字串裡的 `\'`。
+   - `notes` 後面可以加上 TypeScript 的型別註記 `: string`，值的後面也可以加上 `as const` 或 `satisfies string`，這些寫法不影響檢查。
+   - 用 `export let` 或 `export var` 宣告不符合規則。
 2. 從 `slides/` 目錄裡的其他 TSX 檔重新匯出：在 `export { ... } from "./<檔名>"` 的清單裡直接列出 `notes`，例如 `export { notes } from "./agenda"` 或 `export { default, notes } from "./agenda"`，不能把其他名稱改名成 `notes`。被匯出的檔案也可以再用這種寫法，從另一個檔案重新匯出。
 
 不符合這些規則時 build 失敗，錯誤訊息寫出不符合規則的那個 TSX 檔，另有以下規則：
@@ -167,6 +193,8 @@ export default function Agenda() {
 - Template literal 裡出現 `\n`、`\r` 或 `\t` 時，錯誤訊息另外說明直接換行或寫空白。
 - 跳脫了不需要跳脫的字元時，也就是引號字串裡的 `` \` ``、`\$` 與和外層不同的引號，例如雙引號字串裡的 `\'`，以及 template literal 裡的 `\"` 與 `\'`，錯誤訊息另外說明這個字元直接寫，不用跳脫。
 - 出現其他跳脫寫法時，例如 `\*`、template literal 裡行尾的 `\` 或 `\u`，錯誤訊息另外說明要把 `\` 寫成 `\\`。
+
+情境：
 
 - FRAME-R7.1 Template literal 裡有 `${`
   - 前提：`agenda` 的 `notes` 寫了 `範例：${name}`，`${` 沒有跳脫
@@ -309,4 +337,10 @@ export default function Agenda() {
   - 動作：Build
   - 結果：Build 失敗，錯誤訊息寫出 `agenda`，並說明單引號直接寫，不用跳脫
 
-> 設計理由：Build 時檢查 `notes`，不只靠型別檢查，因為 `make build` 本身不做型別檢查，而且有些漏掉的跳脫連型別檢查都擋不下來。備註漏掉 `${` 的跳脫時，`${user}` 這種沒有宣告的名稱只有 `make check` 的型別檢查擋得下來，講者只跑 `make build` 的話，build 會成功，播放時整份簡報的 JS 一載入就出錯，畫面一片空白，因為所有頁面都打包在同一個 JS 檔裡。`${name}`、`${status}` 這種剛好是瀏覽器全域變數的名稱，連型別檢查都會通過，播放時備註裡的這段文字直接消失。反斜線也一樣，Markdown 的 `\_` 經過 JS 字串的跳脫之後只剩 `_`，`\u` 則讓 build 因為 JS 的語法錯誤而失敗，錯誤訊息也沒有寫出要改成什麼。曾考慮改用 `` String.raw`...` `` 寫備註，讓反斜線照原樣保留，但這樣 `` \` `` 也會連反斜線一起保留，Markdown 把它當成跳脫的反引號，行內程式碼就寫不出來。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。
+> 設計理由：Build 時檢查 `notes`，不只靠型別檢查，因為 `make build` 本身不做型別檢查，而且有些漏掉的跳脫連型別檢查都擋不下來。
+>
+> 備註漏掉 `${` 的跳脫時，`${user}` 這種沒有宣告的名稱只有 `make check` 的型別檢查擋得下來，講者只跑 `make build` 的話，build 會成功，播放時整份簡報的 JS 一載入就出錯，畫面一片空白，因為所有頁面都打包在同一個 JS 檔裡。`${name}`、`${status}` 這種剛好是瀏覽器全域變數的名稱，連型別檢查都會通過，播放時備註裡的這段文字直接消失。
+>
+> 反斜線也一樣，Markdown 的 `\_` 經過 JS 字串的跳脫之後只剩 `_`，`\u` 則讓 build 因為 JS 的語法錯誤而失敗，錯誤訊息也沒有寫出要改成什麼。
+>
+> 曾考慮改用 `` String.raw`...` `` 寫備註，讓反斜線照原樣保留，但這樣 `` \` `` 也會連反斜線一起保留，Markdown 把它當成跳脫的反引號，行內程式碼就寫不出來。完整討論見 [0004](../plans/archive/0004-presenter-mode.md)。

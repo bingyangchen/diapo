@@ -13,7 +13,10 @@
 | `seven-pages` | 七頁 | Page 1 到 Page 7 |
 | `forty-pages` | 四十頁 | Page 1 到 Page 40 |
 
-檢查之前先執行 `make build-site DECKS_DIR=tests/fixtures/decks`。步驟裡的「開啟 `<簡報>`」指用瀏覽器開啟 `dist/<簡報>/index.html`，「開啟 `<簡報>` 的 `<hash>`」指開啟網址加上這個 hash 的 `dist/<簡報>/index.html`。要從網站開啟簡報時，再執行 `make serve`，步驟裡的 `<Local 網址>` 指這個指令在終端機印出的 Local 網址，通常是 `http://localhost:4173/`。要在 iPad 或 iPhone 上檢查時，改執行 `pnpm exec vite preview --outDir dist --host`，並讓 iPad 或 iPhone 與電腦連上同一個網路；步驟裡的 `<Network 網址>` 指這個指令在終端機印出的 Network 網址。
+檢查之前先執行 `make build-site DECKS_DIR=tests/fixtures/decks`。步驟裡的「開啟 `<簡報>`」指用瀏覽器開啟 `dist/<簡報>/index.html`，「開啟 `<簡報>` 的 `<hash>`」指開啟網址加上這個 hash 的 `dist/<簡報>/index.html`。以下情況要另外執行指令：
+
+- 要從網站開啟簡報時，再執行 `make serve`，步驟裡的 `<Local 網址>` 指這個指令在終端機印出的 Local 網址，通常是 `http://localhost:4173/`。
+- 要在 iPad 或 iPhone 上檢查時，改執行 `pnpm exec vite preview --outDir dist --host`，並讓 iPad 或 iPhone 與電腦連上同一個網路；步驟裡的 `<Network 網址>` 指這個指令在終端機印出的 Network 網址。
 
 開關總覽的動畫只有 300 毫秒。檢查動畫時，在 Chrome 的 DevTools 打開 Animations 面板，把播放速度調成 10%，動畫就會放慢十倍。
 

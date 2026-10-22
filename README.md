@@ -139,7 +139,13 @@ While a deck plays, the URL hash names the current slide and step (`#/intro`, or
 
 After Home, End, a typed slide number, or a slide chosen in the overview, the browser's back button returns to the slide and step you jumped from.
 
-The overview shows every slide as a thumbnail of its last step, four to a row. Move the selection with the arrow keys and press Enter, click a thumbnail, or type a slide number and press Enter to jump to that slide's first step; G or the button closes the overview without jumping. While the overview is open, use the keyboard, the mouse, or touch: a presenter remote's Page Up and Page Down only scroll the overview, and its black screen key does nothing. The full rules are in `docs/specs/overview.md`.
+The overview shows every slide as a thumbnail of its last step, four to a row.
+
+- To jump to a slide's first step, move the selection with the arrow keys and press Enter, click a thumbnail, or type a slide number and press Enter.
+- To close the overview without jumping, press G or click the button.
+- While the overview is open, use the keyboard, the mouse, or touch: a presenter remote's Page Up and Page Down only scroll the overview, and its black screen key does nothing.
+
+The full rules are in `docs/specs/overview.md`.
 
 ### Presenter Mode
 
@@ -148,7 +154,13 @@ Press S in the window that plays the deck to open the presenter window, which sh
 1. Connect the projector and set the displays to extend the desktop, not to mirror it. On macOS, keep "Displays have separate Spaces" on in System Settings > Desktop & Dock, or a window going fullscreen on one display blacks out the other.
 2. Press S, then drag the deck window to the projector and press F there. The presenter window stays on your laptop.
 
-If the deck window is already on the projector when you press S, for example after closing the presenter window by mistake, the presenter window opens on the projector too; drag it back to your laptop. S does nothing while the deck window is in fullscreen, so press Esc first. In Chrome, after the deck window reloads, click an empty spot on the deck window before clicking its Back button; otherwise, after a jump made in the presenter window, the Back button skips every slide of the deck and returns to the page you opened the deck from. The full rules are in `docs/specs/presenter.md`.
+Watch for these cases:
+
+- If the deck window is already on the projector when you press S, for example after closing the presenter window by mistake, the presenter window opens on the projector too; drag it back to your laptop.
+- S does nothing while the deck window is in fullscreen, so press Esc first.
+- In Chrome, after the deck window reloads, click an empty spot on the deck window before clicking its Back button; otherwise, after a jump made in the presenter window, the Back button skips every slide of the deck and returns to the page you opened the deck from.
+
+The full rules are in `docs/specs/presenter.md`.
 
 ## Deployment
 
