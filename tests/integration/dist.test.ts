@@ -71,6 +71,12 @@ describe("FRAME-R5 unused slide files stay out of the slidetray", () => {
 
     expect(slidetray).toContain("Chain end");
   });
+
+  test("FRAME-R5.4 classes in a slide file not listed in slides still reach the slidetray CSS", async () => {
+    const css = await readCssFiles(path.join(localOutput, "example"));
+
+    expect(css).toContain("unlisted-draft-marker");
+  });
 });
 
 /** Returns the text of the home page and its assets, which embed the deck list. */
@@ -83,12 +89,19 @@ async function readHomePageFiles(outDirectory: string): Promise<string> {
 }
 
 async function readAllFiles(directory: string): Promise<string> {
+  return readFiles(await listFiles(directory));
+}
+
+async function readCssFiles(directory: string): Promise<string> {
+  const filePaths = await listFiles(directory);
+  return readFiles(filePaths.filter((filePath) => filePath.endsWith(".css")));
+}
+
+async function listFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { recursive: true, withFileTypes: true });
-  return readFiles(
-    entries
-      .filter((entry) => entry.isFile())
-      .map((entry) => path.join(entry.parentPath, entry.name)),
-  );
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.join(entry.parentPath, entry.name));
 }
 
 async function readFiles(filePaths: string[]): Promise<string> {
